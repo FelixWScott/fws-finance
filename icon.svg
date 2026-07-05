@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0d0d0d"/>
+  <rect width="512" height="4" y="0" fill="#e8002a"/>
+  <rect width="512" height="4" y="508" fill="#e8002a"/>
+  <text y="340" x="256" text-anchor="middle" font-size="320" font-family="monospace" font-weight="bold" fill="#e8002a">F</text>
+  <text y="420" x="256" text-anchor="middle" font-size="48" font-family="monospace" fill="#f5c400" letter-spacing="8">FWS</text>
+</svg>

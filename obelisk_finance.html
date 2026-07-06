@@ -350,6 +350,14 @@ body{
 <!-- DASHBOARD -->
 <div class="screen active" id="screen-dashboard">
   <div class="screen-header" style="display:flex;justify-content:space-between;align-items:flex-start;"><div><div class="fws-tag" style="font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--accent);letter-spacing:.2em;margin-bottom:4px;">// FWS.FINANCE</div><h1>Dashboard</h1><div class="subtitle" id="dash-date"></div></div><button onclick="showScreen('settings')" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:36px;height:36px;color:var(--muted);font-size:1.1rem;cursor:pointer;margin-top:48px;flex-shrink:0;">⚙️</button></div>
+  <!-- Monzo queue banner -->
+  <div id="monzo-banner" style="display:none;margin:0 16px 12px;background:var(--yellow-soft);border:1px solid var(--yellow);border-radius:var(--radius);padding:12px 16px;display:none;justify-content:space-between;align-items:center;">
+    <div>
+      <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--yellow);text-transform:uppercase;letter-spacing:.12em;margin-bottom:2px;">// Monzo import</div>
+      <div style="font-family:var(--font-mono);font-size:.82rem;color:var(--text);"><span id="monzo-queue-count">0</span> transactions pending review</div>
+    </div>
+    <button onclick="openMonzoQueue()" style="background:var(--yellow);color:#000;border:none;border-radius:var(--radius);padding:8px 14px;font-family:var(--font-mono);font-size:.68rem;font-weight:700;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;">Review →</button>
+  </div>
   <div id="dash-payday"></div>
   <div class="section-label">This month's income</div>
   <div class="income-grid">
@@ -403,13 +411,13 @@ body{
       <div class="cat-grid">
         <button class="cat-btn" data-cat="bills" onclick="selectCat(this)"><span class="cat-icon">🏡</span>Bills</button>
         <button class="cat-btn" data-cat="groceries" onclick="selectCat(this)"><span class="cat-icon">🛒</span>Groceries</button>
+        <button class="cat-btn" data-cat="coffee" onclick="selectCat(this)"><span class="cat-icon">☕</span>Coffee</button>
         <button class="cat-btn" data-cat="dog" onclick="selectCat(this)"><span class="cat-icon">🐕</span>Dog</button>
         <button class="cat-btn" data-cat="travel" onclick="selectCat(this)"><span class="cat-icon">🚌</span>Travel</button>
         <button class="cat-btn" data-cat="shopping" onclick="selectCat(this)"><span class="cat-icon">🛍️</span>Shopping</button>
         <button class="cat-btn" data-cat="experiences" onclick="selectCat(this)"><span class="cat-icon">🎟️</span>Experiences</button>
         <button class="cat-btn" data-cat="subscriptions" onclick="selectCat(this)"><span class="cat-icon">📱</span>Subscriptions</button>
         <button class="cat-btn" data-cat="driving" onclick="selectCat(this)"><span class="cat-icon">🚗</span>Driving</button>
-        <button class="cat-btn" data-cat="housing" onclick="selectCat(this)"><span class="cat-icon">🏠</span>Housing</button>
         <button class="cat-btn" data-cat="other" onclick="selectCat(this)"><span class="cat-icon">💷</span>Other</button>
       </div>
     </div>
@@ -594,13 +602,13 @@ body{
         <div class="cat-grid" id="edit-cat-grid">
           <button class="cat-btn" data-cat="bills" onclick="editSelectCat(this)"><span class="cat-icon">🏡</span>Bills</button>
           <button class="cat-btn" data-cat="groceries" onclick="editSelectCat(this)"><span class="cat-icon">🛒</span>Groceries</button>
+          <button class="cat-btn" data-cat="coffee" onclick="editSelectCat(this)"><span class="cat-icon">☕</span>Coffee</button>
           <button class="cat-btn" data-cat="dog" onclick="editSelectCat(this)"><span class="cat-icon">🐕</span>Dog</button>
           <button class="cat-btn" data-cat="travel" onclick="editSelectCat(this)"><span class="cat-icon">🚌</span>Travel</button>
           <button class="cat-btn" data-cat="shopping" onclick="editSelectCat(this)"><span class="cat-icon">🛍️</span>Shopping</button>
           <button class="cat-btn" data-cat="experiences" onclick="editSelectCat(this)"><span class="cat-icon">🎟️</span>Experiences</button>
           <button class="cat-btn" data-cat="subscriptions" onclick="editSelectCat(this)"><span class="cat-icon">📱</span>Subscriptions</button>
           <button class="cat-btn" data-cat="driving" onclick="editSelectCat(this)"><span class="cat-icon">🚗</span>Driving</button>
-          <button class="cat-btn" data-cat="housing" onclick="editSelectCat(this)"><span class="cat-icon">🏠</span>Housing</button>
           <button class="cat-btn" data-cat="other" onclick="editSelectCat(this)"><span class="cat-icon">💷</span>Other</button>
         </div>
       </div>
@@ -743,8 +751,8 @@ body{
         <label>Category</label>
         <select id="rec-cat" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:14px;font-size:.9rem;width:100%;outline:none;-webkit-appearance:none;font-family:var(--font-mono);">
           <option value="bills">🏡 Home & Bills</option>
-          <option value="housing">🏠 Housing</option>
           <option value="groceries">🛒 Groceries</option>
+          <option value="coffee">☕ Coffee & snacks</option>
           <option value="dog">🐕 Dog</option>
           <option value="travel">🚌 Travel</option>
           <option value="shopping">🛍️ Shopping</option>
@@ -774,6 +782,36 @@ body{
   </div>
 </div>
 
+<!-- BUDGET DRILL-DOWN SHEET -->
+<div class="sheet-overlay" id="budget-drill-overlay" onclick="closeSheet('budget-drill-overlay',event)">
+  <div class="bottom-sheet" style="max-height:85vh;">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div>
+        <div style="font-size:1rem;font-weight:700;font-family:var(--font-main);letter-spacing:.06em;text-transform:uppercase;" id="drill-title">—</div>
+        <div style="font-family:var(--font-mono);font-size:.65rem;color:var(--muted);margin-top:2px;" id="drill-sub">—</div>
+      </div>
+      <button class="sheet-close" onclick="closeSheet('budget-drill-overlay')">✕</button>
+    </div>
+    <div style="padding:0 16px 16px;" id="drill-list"></div>
+  </div>
+</div>
+
+<!-- MONZO REVIEW QUEUE -->
+<div class="sheet-overlay" id="monzo-overlay" onclick="closeSheet('monzo-overlay',event)">
+  <div class="bottom-sheet" style="max-height:90vh;">
+    <div class="sheet-handle"></div>
+    <div class="sheet-body">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div class="sheet-title" style="margin-bottom:0;">Monzo import</div>
+        <button onclick="syncMonzoNow()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--muted);padding:6px 12px;font-family:var(--font-mono);font-size:.62rem;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;">↻ Sync now</button>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--muted);margin-bottom:16px;letter-spacing:.04em;">Review and approve imported Monzo transactions. Tap a category to change it before approving.</div>
+      <div id="monzo-queue-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -787,6 +825,7 @@ const SHEETS_BASE=`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`;
 const BUDGET={
   bills:         {label:'Home & Bills',          icon:'🏡',limit:2309},
   groceries:     {label:'Groceries & eating out', icon:'🛒',limit:400},
+  coffee:        {label:'Coffee & snacks',        icon:'☕',limit:60},
   dog:           {label:'Dog',                    icon:'🐕',limit:125},
   travel:        {label:'Travel',                 icon:'🚌',limit:200},
   shopping:      {label:'Shopping & self-care',   icon:'🛍️',limit:200},
@@ -794,16 +833,15 @@ const BUDGET={
   subscriptions: {label:'Subscriptions',          icon:'📱',limit:124.37},
   driving:       {label:'Driving',                icon:'🚗',limit:null},
   savings:       {label:'Savings transfer',       icon:'💰',limit:null},
-  housing:       {label:'Housing',                icon:'🏠',limit:null},
   other:         {label:'Other',                  icon:'💷',limit:null},
 };
 
 const PHASE_BUDGETS={
-  's1':         {bills:2309,groceries:600,dog:125,travel:200,shopping:200,experiences:300,subscriptions:154.36},
-  'pre-ilp':    {bills:2309,groceries:600,dog:125,travel:200,shopping:200,experiences:300,subscriptions:154.36},
-  'ilp-premove':{bills:2309,groceries:600,dog:125,travel:200,shopping:100,experiences:0,  subscriptions:124.37},
-  'ilp-1-6':    {bills:1647,groceries:400,dog:125,travel:200,shopping:200,experiences:300,subscriptions:124.37},
-  'ilp-7plus':  {bills:1324,groceries:400,dog:125,travel:200,shopping:200,experiences:300,subscriptions:124.37},
+  's1':         {bills:2309,groceries:600,coffee:60,dog:125,travel:200,shopping:200,experiences:300,subscriptions:154.36},
+  'pre-ilp':    {bills:2309,groceries:600,coffee:60,dog:125,travel:200,shopping:200,experiences:300,subscriptions:154.36},
+  'ilp-premove':{bills:2309,groceries:600,coffee:60,dog:125,travel:200,shopping:100,experiences:0,  subscriptions:124.37},
+  'ilp-1-6':    {bills:1647,groceries:400,coffee:60,dog:125,travel:200,shopping:200,experiences:300,subscriptions:124.37},
+  'ilp-7plus':  {bills:1324,groceries:400,coffee:60,dog:125,travel:200,shopping:200,experiences:300,subscriptions:124.37},
 };
 
 const PHASE_POTS={
@@ -834,7 +872,7 @@ const PHASES=[
 ];
 
 const DEFAULT_RECURRING=[
-  {id:'rent',     name:'Rent',                 amount:800,  day:1, freq:'monthly', startDate:'', cat:'housing',       type:'expense'},
+  {id:'rent',     name:'Rent',                 amount:800,  day:1, freq:'monthly', startDate:'', cat:'bills',         type:'expense'},
   {id:'water',    name:'Thames Water',          amount:170,  day:1, freq:'monthly', startDate:'', cat:'bills',         type:'expense'},
   {id:'octopus',  name:'Octopus Energy',        amount:200,  day:1, freq:'monthly', startDate:'', cat:'bills',         type:'expense'},
   {id:'ele',      name:'East London Electric',  amount:100,  day:1, freq:'monthly', startDate:'', cat:'bills',         type:'expense'},
@@ -877,7 +915,7 @@ let editingRecurringId=null, editingBudgetKey=null;
 
 function getActivePots(){return currentPhase==='s1'?PHASE_POTS['s1']:PHASE_POTS['ilp'];}
 function getActiveISA(){return currentPhase==='s1'?ISA_S1:ISA_ILP;}
-function getTracked(){return['bills','groceries','dog','travel','shopping','experiences','subscriptions'];}
+function getTracked(){return['bills','groceries','coffee','dog','travel','shopping','experiences','subscriptions'];}
 function fmt(n){return'£'+Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
 function todayStr(){return new Date().toISOString().split('T')[0];}
 function daysUntilPayday(){
@@ -898,27 +936,23 @@ function applyPhaseBudget(){
   Object.entries(pb).forEach(([k,v])=>{if(BUDGET[k])BUDGET[k].limit=customBudget[k]!==undefined?customBudget[k]:v;});
 }
 
-// ─── RECURRING ENGINE ─────────────────────────────────────
+// ─── RECURRING ENGINE (projection only — no auto-logging) ─
 
 // Get all dates a recurring item is due between two dates
 function getOccurrences(r, from, to) {
   const dates = [];
   const freq = r.freq || 'monthly';
   const fo = FREQ_OPTIONS.find(f => f.key === freq);
-
   if (fo && fo.days) {
-    // Week-based: use startDate as anchor
     if (!r.startDate) return dates;
     let d = new Date(r.startDate);
     d.setHours(0,0,0,0);
-    // Wind forward to from date
     while (d < from) d = new Date(d.getTime() + fo.days * 86400000);
     while (d <= to) {
       dates.push(new Date(d));
       d = new Date(d.getTime() + fo.days * 86400000);
     }
   } else {
-    // Calendar-based: monthly, quarterly, annually
     const day = r.day || 1;
     let d = new Date(from.getFullYear(), from.getMonth(), day);
     if (d < from) {
@@ -941,43 +975,20 @@ function dateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-// Check for any recurring payments due since last check and log them
-async function checkAndLogRecurring(existingTxs) {
-  const lastCheck = localStorage.getItem('fwsLastRecurringCheck');
-  const now = new Date();
-  now.setHours(23,59,59,999);
-  const from = lastCheck ? new Date(lastCheck) : new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  from.setHours(0,0,0,0);
-
-  // Get dates already logged for each recurring id
-  const loggedDates = {};
-  existingTxs.forEach(t => {
-    if (t.recurring) {
-      if (!loggedDates[t.recurring]) loggedDates[t.recurring] = new Set();
-      loggedDates[t.recurring].add(t.date);
-    }
+// Check if a transaction matches a recurring item (by ID or name, within ±2 days)
+function matchesRecurring(txs, r, targetDate) {
+  const target = new Date(targetDate);
+  return txs.some(t => {
+    if (!t.date) return false;
+    const tDate = new Date(t.date);
+    const diffDays = Math.abs((tDate - target) / 86400000);
+    if (diffDays > 2) return false;
+    // Match by recurring ID
+    if (t.recurring === r.id) return true;
+    // Match by name (Monzo imports)
+    if (t.note && t.note.toLowerCase().includes(r.name.toLowerCase())) return true;
+    return false;
   });
-
-  const toLog = [];
-  recurringList.forEach(r => {
-    const occurrences = getOccurrences(r, from, now);
-    occurrences.forEach(d => {
-      const ds = dateStr(d);
-      if (!loggedDates[r.id] || !loggedDates[r.id].has(ds)) {
-        toLog.push({ r, date: ds });
-      }
-    });
-  });
-
-  // Log each missed occurrence
-  for (const { r, date } of toLog) {
-    const txType = r.type || 'expense';
-    await appendTx([date, r.amount, txType, txType === 'income' ? '' : r.cat, txType === 'income' ? (r.source || 'other') : '', r.name, r.id]);
-    await new Promise(res => setTimeout(res, 300)); // small delay between writes
-  }
-
-  localStorage.setItem('fwsLastRecurringCheck', dateStr(now));
-  return toLog.length;
 }
 
 // ─── PERSISTENCE ──────────────────────────────────────────
@@ -1171,7 +1182,7 @@ async function renderDashboard(){
     if(!b||!b.limit)return'';
     const s=spent[cat]||0,pct=Math.min(100,(s/b.limit)*100),rem=b.limit-s;
     const bc=pct<60?'bar-green':pct<85?'bar-amber':'bar-red';
-    return`<div class="budget-item">
+    return`<div class="budget-item" onclick="openBudgetDrill('${cat}')" style="cursor:pointer;">
       <div class="budget-item-header"><div class="budget-item-name">${b.icon} ${b.label}</div><div class="budget-item-amounts"><strong>${fmt(s)}</strong> / ${fmt(b.limit)}</div></div>
       <div class="bar-bg"><div class="bar-fill ${bc}" style="width:${pct}%"></div></div>
       <div class="budget-item-remaining">${rem>=0?fmt(rem)+' remaining':fmt(Math.abs(rem))+' over budget'}</div>
@@ -1190,7 +1201,34 @@ async function renderDashboard(){
   }).join(''):`<div class="empty-state"><div class="empty-icon">💸</div>No transactions yet — tap + to add your first</div>`;
 }
 
-// ─── LOG ──────────────────────────────────────────────────
+// ─── BUDGET DRILL-DOWN ────────────────────────────────────
+
+async function openBudgetDrill(cat) {
+  const b = BUDGET[cat];
+  if (!b) return;
+  const txs = await loadTransactions();
+  const catTxs = txs.filter(t => inCurrentMonth(t.date) && t.type === 'expense' && t.category === cat);
+  const total = catTxs.reduce((s,t) => s+t.amount, 0);
+  const rem = (b.limit||0) - total;
+
+  document.getElementById('drill-title').textContent = `${b.icon} ${b.label}`;
+  document.getElementById('drill-sub').textContent = `${fmt(total)} spent · ${rem>=0?fmt(rem)+' remaining':fmt(Math.abs(rem))+' over'} · ${catTxs.length} transaction${catTxs.length!==1?'s':''}`;
+
+  document.getElementById('drill-list').innerHTML = catTxs.length
+    ? [...catTxs].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(t => {
+        const ds = new Date(t.date).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+        return `<div class="day-tx-item" style="margin-bottom:6px;cursor:default;">
+          <div class="day-tx-left">
+            <div class="day-tx-icon">${b.icon}</div>
+            <div><div class="day-tx-name">${t.note||b.label}</div><div class="day-tx-note">${ds}</div></div>
+          </div>
+          <div class="day-tx-amount" style="color:var(--accent);">-${fmt(t.amount)}</div>
+        </div>`;
+      }).join('')
+    : `<div class="empty-state" style="padding:20px;"><div class="empty-icon">${b.icon}</div>Nothing logged in this category yet</div>`;
+
+  openSheet('budget-drill-overlay');
+}
 
 function setType(type){
   currentType=type;selectedCat=null;selectedSource=null;
@@ -1283,20 +1321,24 @@ async function renderCalendar(){
     const txs=byDay[d]||[];
     const real=txs.filter(t=>!t.projected),proj=txs.filter(t=>t.projected);
     const isToday=isCur&&todayD.getDate()===d,isPayday=d===25;
+    const dayDate=new Date(calYear,calMonth,d);
+    const isPastDay=dayDate<todayD;
     const ts=real.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
     const ti=real.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
     const pts=proj.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
     const pti=proj.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
     const hasReal=real.length>0,hasProj=proj.length>0;
+    // Past unmatched projection — recurring was expected but nothing logged
+    const hasUnmatched=isPastDay&&hasProj&&!hasReal;
     const isIncDay=ti>0&&ts===0&&!hasProj;
     let cls='cal-day';
     if(isToday)cls+=' today';if(isPayday)cls+=' payday';if(hasReal)cls+=' has-tx';if(isIncDay)cls+=' income-day';
     const tStr=ts>0?`-£${ts.toFixed(0)}`:ti>0?`+£${ti.toFixed(0)}`:'';
     const pStr=pts>0?`~£${pts.toFixed(0)}`:pti>0?`~+£${pti.toFixed(0)}`:'';
-    html+=`<div class="${cls}" onclick="openDaySheet(${d})">
-      <div class="cal-day-num">${d}</div>
+    html+=`<div class="${cls}" onclick="openDaySheet(${d})" style="${hasUnmatched?'border-color:var(--yellow);opacity:.7;':''}">
+      <div class="cal-day-num" style="${hasUnmatched?'color:var(--yellow);':''}">${d}</div>
       ${tStr?`<div class="cal-day-total">${tStr}</div>`:pStr?`<div class="cal-day-proj-total">${pStr}</div>`:''}
-      ${hasReal?'<div class="cal-day-dot"></div>':hasProj?'<div class="cal-day-proj-dot"></div>':''}
+      ${hasReal?'<div class="cal-day-dot"></div>':hasUnmatched?'<div class="cal-day-dot" style="background:var(--yellow);box-shadow:0 0 4px var(--yellow);"></div>':hasProj?'<div class="cal-day-proj-dot"></div>':''}
     </div>`;
   }
   document.getElementById('cal-days').innerHTML=html;
@@ -1310,6 +1352,17 @@ async function renderCalendar(){
   document.getElementById('cal-total-sub').textContent=`Working month · ${fmt(ti2)} in · ${fmt(te)} out · ${workingTxs.length} transaction${workingTxs.length!==1?'s':''}`;
 }
 function calChangeMonth(dir){calMonth+=dir;if(calMonth>11){calMonth=0;calYear++;}if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
+
+// Swipe support for calendar
+(function(){
+  let startX=0;
+  document.addEventListener('touchstart',e=>{if(document.getElementById('screen-calendar').classList.contains('active'))startX=e.touches[0].clientX;},{passive:true});
+  document.addEventListener('touchend',e=>{
+    if(!document.getElementById('screen-calendar').classList.contains('active'))return;
+    const diff=startX-e.changedTouches[0].clientX;
+    if(Math.abs(diff)>60){calChangeMonth(diff>0?1:-1);}
+  },{passive:true});
+})();
 
 function openDaySheet(day){
   daySheetDate=new Date(calYear,calMonth,day);
@@ -1550,6 +1603,18 @@ function renderSettings(){
       <div class="settings-row-right">${limit!==null?fmt(limit):'No limit'}<span class="settings-chevron">›</span></div>
     </div>`;
   }).filter(Boolean).join('');
+
+  // Budget total
+  const budgetTotal = getTracked().reduce((s,key) => {
+    const b = BUDGET[key];
+    if (!b || !b.limit) return s;
+    return s + (customBudget[key] !== undefined ? customBudget[key] : b.limit);
+  }, 0);
+  const budgetList = document.getElementById('budget-settings-list');
+  budgetList.innerHTML += `<div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">Total committed</div>
+    <div style="font-family:var(--font-mono);font-size:.88rem;color:var(--yellow);">${fmt(budgetTotal)}/mo</div>
+  </div>`;
   document.getElementById('recurring-list').innerHTML=recurringList.length?recurringList.map(r=>{
     const cat=BUDGET[r.cat]||{icon:'💷'};
     const freqLabel={weekly:'Weekly',fortnightly:'Fortnightly','3weekly':'Every 3 weeks','4weekly':'Every 4 weeks',monthly:'Monthly',quarterly:'Quarterly',annually:'Annually'}[r.freq||'monthly']||'Monthly';
@@ -1692,7 +1757,158 @@ function deleteRecurring(){
   saveAll();closeSheet('recurring-edit-overlay');renderSettings();showToast('Removed','success');
 }
 
-// ─── ANALYTICS ────────────────────────────────────────────
+// ─── MONZO QUEUE ──────────────────────────────────────────
+
+const FWS_CATS    = ['bills','groceries','coffee','dog','travel','shopping','experiences','subscriptions','driving','other'];
+const INC_SOURCES = ['salary','overtime','freelance','other'];
+let monzoQueue = [];
+
+// ─── MONZO QUEUE ──────────────────────────────────────────
+
+async function checkMonzoQueue() {
+  try {
+    const data = await apiRead({action:'readQueue'});
+    monzoQueue = data || [];
+    const banner = document.getElementById('monzo-banner');
+    const count  = document.getElementById('monzo-queue-count');
+    if (monzoQueue.length > 0) {
+      count.textContent = monzoQueue.length;
+      banner.style.display = 'flex';
+    } else {
+      banner.style.display = 'none';
+    }
+  } catch(e) { console.error('Queue check error:', e); }
+}
+
+async function syncMonzoNow() {
+  showToast('Syncing Monzo...', '');
+  try {
+    await scriptWrite({action:'syncMonzo'});
+    await new Promise(r => setTimeout(r, 2500));
+    await checkMonzoQueue();
+    renderMonzoQueue();
+    showToast('Sync complete ✓', 'success');
+  } catch(e) { showToast('Sync error', 'error'); }
+}
+
+function openMonzoQueue() {
+  renderMonzoQueue();
+  openSheet('monzo-overlay');
+}
+
+function renderMonzoQueue() {
+  const list = document.getElementById('monzo-queue-list');
+  if (!monzoQueue.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">✅</div>All caught up</div>`;
+    return;
+  }
+
+  list.innerHTML = monzoQueue.map((item, idx) => {
+    const isIncome = item.isIncome;
+    const amtColour = isIncome ? 'var(--green)' : 'var(--accent)';
+    const amtSign   = isIncome ? '+' : '-';
+
+    // Auto-detect matching recurring by name
+    const nameLower = item.name.toLowerCase();
+    const matchedRec = recurringList.find(r =>
+      nameLower.includes(r.name.toLowerCase()) || r.name.toLowerCase().includes(nameLower)
+    );
+
+    // Check for amount discrepancy
+    let discrepancyHtml = '';
+    if (matchedRec && Math.abs(matchedRec.amount - item.amount) > 0.01) {
+      discrepancyHtml = `<div style="font-family:var(--font-mono);font-size:.6rem;color:var(--yellow);margin-top:4px;padding:4px 8px;background:var(--yellow-soft);border-radius:var(--radius);">
+        ⚠ Amount differs from recurring: ${fmt(matchedRec.amount)} projected vs ${fmt(item.amount)} actual
+        <button onclick="updateRecurringAmount('${matchedRec.id}',${item.amount})" style="background:none;border:none;color:var(--yellow);cursor:pointer;font-family:var(--font-mono);font-size:.6rem;text-decoration:underline;margin-left:6px;">Update template</button>
+      </div>`;
+    }
+
+    // Recurring link dropdown
+    const recOptions = `<option value="">No link</option>` +
+      recurringList.map(r => `<option value="${r.id}" ${matchedRec&&matchedRec.id===r.id?'selected':''}>${r.name}</option>`).join('');
+
+    // Category or source selector
+    const selectorHtml = isIncome
+      ? `<select onchange="updateQueueSource(${idx},this.value)"
+          style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:8px;font-family:var(--font-mono);font-size:.72rem;outline:none;-webkit-appearance:none;margin-bottom:6px;">
+          <option value="salary"  ${item.fwsSource==='salary'  ?'selected':''}>💼 Salary</option>
+          <option value="overtime"${item.fwsSource==='overtime'?'selected':''}>⚡ Overtime</option>
+          <option value="freelance"${item.fwsSource==='freelance'?'selected':''}>🎨 Freelance</option>
+          <option value="other"   ${item.fwsSource==='other'   ?'selected':''}>💷 Other</option>
+        </select>`
+      : `<select onchange="updateQueueCat(${idx},this.value)"
+          style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:8px;font-family:var(--font-mono);font-size:.72rem;outline:none;-webkit-appearance:none;margin-bottom:6px;">
+          ${FWS_CATS.map(c=>{const b=BUDGET[c]||{icon:'💷',label:c};return`<option value="${c}" ${c===item.fwsCat?'selected':''}>${b.icon} ${b.label}</option>`;}).join('')}
+        </select>`;
+
+    return `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-left:2px solid ${amtColour};border-radius:var(--radius);padding:12px;" id="monzo-item-${idx}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+        <div style="flex:1;">
+          <div style="font-family:var(--font-main);font-size:.88rem;font-weight:700;letter-spacing:.04em;">${item.name}</div>
+          <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--muted);margin-top:2px;">${item.date} · ${item.monzoCat}</div>
+          ${item.note?`<div style="font-family:var(--font-mono);font-size:.6rem;color:var(--muted);margin-top:1px;">${item.note}</div>`:''}
+          ${discrepancyHtml}
+        </div>
+        <div style="font-family:var(--font-mono);font-size:.95rem;color:${amtColour};flex-shrink:0;margin-left:8px;">${amtSign}${fmt(item.amount)}</div>
+      </div>
+      ${selectorHtml}
+      <select onchange="updateQueueRecurring(${idx},this.value)"
+        style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--muted);padding:8px;font-family:var(--font-mono);font-size:.65rem;outline:none;-webkit-appearance:none;margin-bottom:8px;">
+        ${recOptions}
+      </select>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <button onclick="dismissMonzoItem(${idx})" class="full-btn btn-ghost" style="padding:8px;font-size:.65rem;">✕ Dismiss</button>
+        <button onclick="approveMonzoItem(${idx})" class="full-btn btn-accent" style="padding:8px;font-size:.65rem;">✓ Approve</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateQueueCat(idx, cat)        { monzoQueue[idx].fwsCat    = cat; }
+function updateQueueSource(idx, source)  { monzoQueue[idx].fwsSource = source; }
+function updateQueueRecurring(idx, recId){ monzoQueue[idx].recurringId = recId; }
+
+function updateRecurringAmount(recId, newAmount) {
+  const r = recurringList.find(x => x.id === recId);
+  if (!r) return;
+  r.amount = newAmount;
+  saveAll();
+  showToast(`${r.name} updated to ${fmt(newAmount)} ✓`, 'success');
+}
+
+async function approveMonzoItem(idx) {
+  const item = monzoQueue[idx];
+  try {
+    await scriptWrite({action:'approveQueue', item:item});
+    monzoQueue.splice(idx, 1);
+    renderMonzoQueue();
+    await checkMonzoQueue();
+    showToast('Approved ✓', 'success');
+  } catch(e) { showToast('Error approving', 'error'); }
+}
+
+async function dismissMonzoItem(idx) {
+  const item = monzoQueue[idx];
+  try {
+    await scriptWrite({action:'dismissQueue', txId:item.txId});
+    monzoQueue.splice(idx, 1);
+    renderMonzoQueue();
+    await checkMonzoQueue();
+    showToast('Dismissed', '');
+  } catch(e) { showToast('Error dismissing', 'error'); }
+}
+
+// Helper for reads that need a response (can't use no-cors)
+async function apiRead(params) {
+  const url = new URL(SCRIPT_URL);
+  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, typeof v==='object'?JSON.stringify(v):String(v)));
+  const r = await fetch(url.toString(), {redirect:'follow'});
+  const text = await r.text();
+  const d = JSON.parse(text);
+  if (!d.success) throw new Error(d.error || 'Script error');
+  return d.data;
+}
 
 let analyticsYear=new Date().getFullYear(), analyticsMonth=new Date().getMonth();
 
@@ -1887,10 +2103,8 @@ async function init(){
   // Sync pots and settings from Sheet (source of truth)
   const synced=await syncFromSheet();
   if(synced) applyPhaseBudget();
-  // Auto-log any due recurring payments
-  const txs=await loadTransactions();
-  const logged=await checkAndLogRecurring(txs);
-  if(logged>0)showToast(`${logged} recurring payment${logged>1?'s':''} auto-logged`,'success');
+  // Check Monzo import queue
+  checkMonzoQueue();
   renderDashboard();
 }
 init();

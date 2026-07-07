@@ -26,12 +26,12 @@ self.addEventListener('activate', e => {
 
 // Fetch — network first, fall back to cache
 self.addEventListener('fetch', e => {
-  // Only handle same-origin requests
+  // Only handle GET requests from same origin (POST/PUT can't be cached)
+  if (e.request.method !== 'GET') return;
   if (!e.request.url.startsWith(self.location.origin)) return;
   e.respondWith(
     fetch(e.request)
       .then(res => {
-        // Cache successful responses
         const clone = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, clone));
         return res;

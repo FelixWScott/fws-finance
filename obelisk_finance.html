@@ -421,6 +421,14 @@ body{
       </div>
     </div>
 
+    <!-- Projected sub-toggle -->
+    <div id="projected-panel" style="display:none;margin-bottom:16px;">
+      <div class="toggle-row" style="grid-template-columns:1fr 1fr;">
+        <button class="toggle-btn active" id="proj-toggle-expense" onclick="setProjDirection('expense')">💸 Expense</button>
+        <button class="toggle-btn" id="proj-toggle-income" onclick="setProjDirection('income')">💰 Income</button>
+      </div>
+    </div>
+
     <div class="field" id="field-category">
       <label>Category</label>
       <div class="cat-grid">
@@ -1207,7 +1215,9 @@ async function renderDashboard(){
   txs.filter(t=>t.type==='projected'&&t.recurring!=='matched').forEach(t=>{
     const d=new Date(t.date);
     if(d>=projFrom&&d<wEnd){
-      projExp+=t.amount;
+      // Has a source = income projection, otherwise expense
+      if(t.source&&t.source.length>0) projInc+=t.amount;
+      else projExp+=t.amount;
     }
   });
   const projected=surplus+projInc-projExp;
@@ -1280,20 +1290,30 @@ async function openBudgetDrill(cat) {
   openSheet('budget-drill-overlay');
 }
 
+let projDirection='expense'; // tracks income/expense for projected type
+
 function setType(type){
   currentType=type;selectedCat=null;selectedSource=null;
+  projDirection='expense';
   document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('selected'));
   document.querySelectorAll('#field-source .source-btn').forEach(b=>b.classList.remove('selected'));
   document.getElementById('toggle-expense').classList.toggle('active',type==='expense');
   document.getElementById('toggle-income').classList.toggle('active',type==='income');
   document.getElementById('toggle-instalment').classList.toggle('active',type==='instalment');
   document.getElementById('toggle-projected').classList.toggle('active',type==='projected');
-  // Category shown for expense, instalment and projected
-  document.getElementById('field-category').style.display=type==='income'?'none':'';
-  // Source shown for income only
-  document.getElementById('field-source').style.display=type==='income'?'':'none';
-  // Instalment panel shown for instalment only
+  document.getElementById('field-category').style.display=(type==='income')?'none':'';
+  document.getElementById('field-source').style.display=(type==='income')?'':'none';
   document.getElementById('instalment-panel').style.display=type==='instalment'?'block':'none';
+  document.getElementById('projected-panel').style.display=type==='projected'?'block':'none';
+  if(type==='projected') setProjDirection('expense');
+}
+
+function setProjDirection(dir){
+  projDirection=dir;
+  document.getElementById('proj-toggle-expense').classList.toggle('active',dir==='expense');
+  document.getElementById('proj-toggle-income').classList.toggle('active',dir==='income');
+  document.getElementById('field-category').style.display=dir==='income'?'none':'';
+  document.getElementById('field-source').style.display=dir==='income'?'':'none';
 }
 function selectCat(el){document.querySelectorAll('#field-category .cat-btn').forEach(b=>b.classList.remove('selected'));el.classList.add('selected');selectedCat=el.dataset.cat;}
 function selectSource(el){document.querySelectorAll('.source-btn').forEach(b=>b.classList.remove('selected'));el.classList.add('selected');selectedSource=el.dataset.source;}
@@ -1322,8 +1342,10 @@ async function saveTransaction(){
       }
       showToast(`${count} payments scheduled ✓`,'success');
     } else if(currentType==='projected'){
-      // Store as projected type in sheet — visual only, matched against Monzo queue
-      await appendTx([date,amount,'projected',selectedCat,'',note||'','projected']);
+      // Store as projected type — category for expense, source for income
+      const projCat=projDirection==='income'?'':selectedCat||'';
+      const projSrc=projDirection==='income'?selectedSource||'salary':'';
+      await appendTx([date,amount,'projected',projCat,projSrc,note||'','projected']);
       showToast('Projection added ✓','success');
     } else {
       await appendTx([date,amount,currentType,currentType==='expense'?selectedCat:'',currentType==='income'?selectedSource:'',note,'']);
@@ -1443,6 +1465,14 @@ async function renderCalendar(){
           else projInc+=r.amount;
         }
       });
+    });
+    // One-off projected transactions
+    calTxCache.filter(t=>t.type==='projected'&&t.recurring!=='matched').forEach(t=>{
+      const d=new Date(t.date);
+      if(d>=projFrom&&d<wEnd){
+        if(t.source&&t.source.length>0) projInc+=t.amount;
+        else projExp+=t.amount;
+      }
     });
   }
 

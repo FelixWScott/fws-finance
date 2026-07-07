@@ -1804,7 +1804,7 @@ function renderMonzoQueue() {
   }
 
   list.innerHTML = monzoQueue.map((item, idx) => {
-    const isIncome = item.isIncome;
+    const isIncome = item.isIncome === true || item.isIncome === 'true' || item.isIncome === 'TRUE';
     const amtColour = isIncome ? 'var(--green)' : 'var(--accent)';
     const amtSign   = isIncome ? '+' : '-';
 
@@ -2120,4 +2120,3 @@ if('serviceWorker' in navigator){
 </script>
 </body>
 </html>
-

@@ -375,12 +375,13 @@ body{
         <div class="card-value" id="dash-surplus" style="font-size:1.4rem;">—</div>
         <div class="card-sub" id="dash-surplus-sub">—</div>
       </div>
-      <div>
+      <div onclick="toggleProjBreakdown()" style="cursor:pointer;">
         <div style="font-family:var(--font-mono);font-size:.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Projected end</div>
         <div class="card-value" id="dash-projected" style="font-size:1.4rem;">—</div>
         <div class="card-sub" id="dash-projected-sub">—</div>
       </div>
     </div>
+    <div id="proj-breakdown-wrap" style="display:none;"><div id="proj-breakdown"></div></div>
   </div>
   <div class="section-label">Budget remaining</div>
   <div class="budget-list" id="budget-bars"><div class="loading"><span class="spinner"></span>Loading...</div></div>
@@ -948,11 +949,16 @@ function daysUntilPayday(){
 }
 function getMonthRange(){
   const now=new Date(),y=now.getFullYear(),m=now.getMonth();
+  // Working month rolls over ON the 25th (payday = day one of new working month)
+  if(now.getDate()>=25) return{start:new Date(y,m,25),end:new Date(y,m+1,25)};
   return{start:new Date(y,m-1,25),end:new Date(y,m,25)};
 }
-function inCurrentMonth(dateStr){
-  const d=new Date(dateStr),{start,end}=getMonthRange();
-  return d>=start&&d<end;
+function inCurrentMonth(ds){
+  // String comparison avoids timezone drift on boundary dates
+  const {start,end}=getMonthRange();
+  const s=dateStr(start),e=dateStr(end);
+  const d=String(ds).split('T')[0];
+  return d>=s&&d<e;
 }
 function applyPhaseBudget(){
   const pb=PHASE_BUDGETS[currentPhase]||PHASE_BUDGETS['ilp-7plus'];
@@ -1197,7 +1203,9 @@ async function renderDashboard(){
   // Projected month end — actual + upcoming recurring + one-off projections before the 25th
   const {start:wStart,end:wEnd}=getMonthRange();
   const projFrom=new Date();
+  const wEndStr=dateStr(wEnd),projFromStr=dateStr(projFrom);
   let projExp=0,projInc=0;
+  const projByCat={};
 
   // Upcoming recurring payments not yet logged
   recurringList.forEach(r=>{
@@ -1205,7 +1213,11 @@ async function renderDashboard(){
       const ds=dateStr(d2);
       const logged=txs.some(t=>matchesRecurring([t],r,ds));
       if(!logged){
-        if((r.type||'expense')==='expense') projExp+=r.amount;
+        if((r.type||'expense')==='expense'){
+          projExp+=r.amount;
+          const c=r.cat||'other';
+          projByCat[c]=(projByCat[c]||0)+r.amount;
+        }
         else projInc+=r.amount;
       }
     });
@@ -1213,11 +1225,15 @@ async function renderDashboard(){
 
   // One-off projected transactions from Sheet (not yet matched)
   txs.filter(t=>t.type==='projected'&&t.recurring!=='matched').forEach(t=>{
-    const d=new Date(t.date);
-    if(d>=projFrom&&d<wEnd){
+    const d=String(t.date).split('T')[0];
+    if(d>=projFromStr&&d<wEndStr){
       // Has a source = income projection, otherwise expense
       if(t.source&&t.source.length>0) projInc+=t.amount;
-      else projExp+=t.amount;
+      else{
+        projExp+=t.amount;
+        const c=t.category||'other';
+        projByCat[c]=(projByCat[c]||0)+t.amount;
+      }
     }
   });
   const projected=surplus+projInc-projExp;
@@ -1230,7 +1246,23 @@ async function renderDashboard(){
   // Projected month end
   document.getElementById('dash-projected').textContent=(projected<0?'-':'')+fmt(projected);
   document.getElementById('dash-projected').style.color=projected>=0?'var(--green)':'var(--accent)';
-  document.getElementById('dash-projected-sub').textContent=projExp>0||projInc>0?`~${fmt(projExp)} still due`:'No upcoming spend';
+  document.getElementById('dash-projected-sub').textContent=projExp>0||projInc>0?`~${fmt(projExp)} still due · tap for breakdown`:'No upcoming spend';
+
+  // Collapsible category breakdown of projected spend
+  const bd=document.getElementById('proj-breakdown');
+  const cats=Object.entries(projByCat).sort((a,b)=>b[1]-a[1]);
+  if(cats.length){
+    bd.innerHTML=`<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:10px;">
+      <div style="font-family:var(--font-mono);font-size:.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px;">Still due this month</div>
+      ${cats.map(([c,amt])=>{
+        const b=BUDGET[c]||{icon:'💷',label:c};
+        return`<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;">
+          <div style="font-family:var(--font-mono);font-size:.68rem;color:var(--text);">${b.icon} ${b.label}</div>
+          <div style="font-family:var(--font-mono);font-size:.68rem;color:var(--muted);">~${fmt(amt)}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  } else bd.innerHTML='';
 
   const sc=document.getElementById('surplus-card');
   sc.className='card '+(surplus>=0?'surplus-card':'deficit-card');
@@ -1262,6 +1294,11 @@ async function renderDashboard(){
 }
 
 // ─── BUDGET DRILL-DOWN ────────────────────────────────────
+
+function toggleProjBreakdown(){
+  const w=document.getElementById('proj-breakdown-wrap');
+  w.style.display=w.style.display==='none'?'block':'none';
+}
 
 async function openBudgetDrill(cat) {
   const b = BUDGET[cat];
@@ -1329,18 +1366,18 @@ async function saveTransaction(){
   btn.disabled=true;btn.textContent='Saving...';
   try{
     if(currentType==='instalment'){
-      // Create multiple expense entries spread across dates
+      // Create multiple PROJECTED entries spread across dates — matched by Monzo when each payment lands
       const count=parseInt(document.getElementById('inst-count').value)||2;
       const freqDays=parseInt(document.getElementById('inst-freq').value)||30;
       const instAmount=amount/count;
       let d=new Date(date);
       for(let i=0;i<count;i++){
         const ds=dateStr(d);
-        await appendTx([ds,instAmount.toFixed(2),'expense',selectedCat,'',`${note||selectedCat} ${i+1}/${count}`,'instalment']);
+        await appendTx([ds,instAmount.toFixed(2),'projected',selectedCat,'',`${note||selectedCat} ${i+1}/${count}`,'projected']);
         d=new Date(d.getTime()+freqDays*86400000);
         if(i<count-1)await new Promise(r=>setTimeout(r,250));
       }
-      showToast(`${count} payments scheduled ✓`,'success');
+      showToast(`${count} payments projected ✓`,'success');
     } else if(currentType==='projected'){
       // Store as projected type — category for expense, source for income
       const projCat=projDirection==='income'?'':selectedCat||'';
@@ -1399,7 +1436,7 @@ async function renderCalendar(){
         const logged=calTxCache.some(t=>t.date===ds&&t.recurring===r.id);
         if(!logged){
           if(!byDay[day])byDay[day]=[];
-          byDay[day].push({date:ds,amount:r.amount,type:r.type||'expense',category:r.cat,source:r.source||'',note:r.name,recurring:r.id,projected:true,_rowIndex:-1});
+          byDay[day].push({date:ds,amount:r.amount,type:r.type||'expense',category:(r.type==='income')?'':r.cat,source:r.source||'',note:r.name,recurring:r.id,projected:true,_rowIndex:-1});
         }
       }
     });
@@ -1517,7 +1554,7 @@ function openDaySheet(day){
         if(d2.getDate()===day&&d2>todayD){
           const ds=dateStr(d2);
           if(!calTxCache.some(t=>t.date===ds&&t.recurring===r.id))
-            projTxs.push({date:ds,amount:r.amount,type:r.type||'expense',category:r.cat,source:r.source||'',note:r.name,projected:true,_rowIndex:-1});
+            projTxs.push({date:ds,amount:r.amount,type:r.type||'expense',category:(r.type==='income')?'':r.cat,source:r.source||'',note:r.name,projected:true,_rowIndex:-1});
         }
       });
     });
@@ -1877,7 +1914,8 @@ function saveRecurring(){
 
   const entry={
     id:editingRecurringId||`rec_${Date.now()}`,
-    name, amount, freq, day, startDate, cat,
+    name, amount, freq, day, startDate,
+    cat:recType==='income'?'':cat,
     type:recType,
     source:recType==='income'?recSource:'',
   };

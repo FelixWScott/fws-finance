@@ -1207,9 +1207,10 @@ async function renderDashboard(){
   let projExp=0,projInc=0;
   const projByCat={};
 
-  // Upcoming recurring payments not yet logged
+  // Upcoming recurring payments not yet logged (25th exclusive — payday belongs to next WM)
+  const wEndX=new Date(wEnd.getTime()-1);
   recurringList.forEach(r=>{
-    getOccurrences(r,projFrom,wEnd).forEach(d2=>{
+    getOccurrences(r,projFrom,wEndX).forEach(d2=>{
       const ds=dateStr(d2);
       const logged=txs.some(t=>matchesRecurring([t],r,ds));
       if(!logged){
@@ -1281,11 +1282,13 @@ async function renderDashboard(){
     </div>`;
   }).filter(Boolean).join('');
 
-  const recent=[...txs].filter(t=>t.type!=='transfer').reverse().slice(0,5);
+  // Cache for the edit sheet (openEditSheet looks up by _rowIndex in calTxCache)
+  calTxCache=txs;
+  const recent=[...txs].filter(t=>t.type!=='transfer'&&t.type!=='projected').reverse().slice(0,5);
   document.getElementById('recent-tx').innerHTML=recent.length?recent.map(t=>{
     const cat=BUDGET[t.category]||{icon:'💷',label:t.category};
     const ds=new Date(t.date).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
-    return`<div class="tx-item">
+    return`<div class="tx-item" onclick="openEditSheet(${t._rowIndex})" style="cursor:pointer;">
       <div class="tx-left"><div class="tx-icon">${t.type==='income'?'💰':cat.icon}</div>
       <div><div class="tx-name">${t.note||cat.label}</div><div class="tx-meta">${ds} · ${cat.label}</div></div></div>
       <div class="tx-amount ${t.type}">${t.type==='expense'?'-':'+'}${fmt(t.amount)}</div>
@@ -1370,11 +1373,14 @@ async function saveTransaction(){
       const count=parseInt(document.getElementById('inst-count').value)||2;
       const freqDays=parseInt(document.getElementById('inst-freq').value)||30;
       const instAmount=amount/count;
-      let d=new Date(date);
+      const base=new Date(date);
       for(let i=0;i<count;i++){
+        // Monthly (30) = same day each month; week-based = fixed day intervals
+        const d=freqDays===30
+          ? new Date(base.getFullYear(),base.getMonth()+i,base.getDate())
+          : new Date(base.getTime()+i*freqDays*86400000);
         const ds=dateStr(d);
         await appendTx([ds,instAmount.toFixed(2),'projected',selectedCat,'',`${note||selectedCat} ${i+1}/${count}`,'projected']);
-        d=new Date(d.getTime()+freqDays*86400000);
         if(i<count-1)await new Promise(r=>setTimeout(r,250));
       }
       showToast(`${count} payments projected ✓`,'success');
@@ -1475,26 +1481,30 @@ async function renderCalendar(){
   }
   document.getElementById('cal-days').innerHTML=html;
 
-  // Working month for the displayed calendar month (25th-25th)
+  // Working month for the displayed calendar month (25th prev → 24th this, payday-exclusive)
   const wStart=new Date(calYear,calMonth-1,25);
   const wEnd=new Date(calYear,calMonth,25);
+  const wStartStr=dateStr(wStart),wEndStr=dateStr(wEnd);
   const todayNow=new Date();
-  const isFutureMonth=new Date(calYear,calMonth,1)>new Date(todayNow.getFullYear(),todayNow.getMonth(),1);
-  const isPastMonth=new Date(calYear,calMonth,1)<new Date(todayNow.getFullYear(),todayNow.getMonth(),1);
+  const ended=todayNow>=wEnd;          // working month fully in the past
+  const notStarted=todayNow<wStart;    // working month fully in the future
 
-  // Actual transactions for this working month
+  // Actual transactions for this working month (string comparison, 25th exclusive at end)
   const workingTxs=calTxCache.filter(t=>{
-    const d=new Date(t.date);return d>=wStart&&d<wEnd&&t.type!=='transfer';
+    const d=String(t.date).split('T')[0];
+    return d>=wStartStr&&d<wEndStr&&t.type!=='transfer'&&t.type!=='projected';
   });
   const te=workingTxs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
   const ti2=workingTxs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
 
   // Projected transactions for remaining future dates in this working month
   let projExp=0,projInc=0;
-  if(!isPastMonth){
+  if(!ended){
     const projFrom=new Date(Math.max(todayNow.getTime(),wStart.getTime()));
+    const projFromStr=dateStr(projFrom);
+    const wEndX=new Date(wEnd.getTime()-1); // exclusive — the 25th belongs to next working month
     recurringList.forEach(r=>{
-      getOccurrences(r,projFrom,wEnd).forEach(d2=>{
+      getOccurrences(r,projFrom,wEndX).forEach(d2=>{
         const ds=dateStr(d2);
         const logged=calTxCache.some(t=>matchesRecurring([t],r,ds));
         if(!logged){
@@ -1503,10 +1513,10 @@ async function renderCalendar(){
         }
       });
     });
-    // One-off projected transactions
+    // One-off projected transactions (string comparison)
     calTxCache.filter(t=>t.type==='projected'&&t.recurring!=='matched').forEach(t=>{
-      const d=new Date(t.date);
-      if(d>=projFrom&&d<wEnd){
+      const d=String(t.date).split('T')[0];
+      if(d>=projFromStr&&d<wEndStr){
         if(t.source&&t.source.length>0) projInc+=t.amount;
         else projExp+=t.amount;
       }
@@ -1515,14 +1525,22 @@ async function renderCalendar(){
 
   const actualSurplus=ti2-te;
   const projectedSurplus=actualSurplus+projInc-projExp;
-  const label=isFutureMonth?'Projected':isPastMonth?'Final':'So far';
+  const hasProj=projExp>0||projInc>0;
+  const label=notStarted?'Projected':ended?'Final':'So far';
 
-  document.getElementById('cal-total').textContent=(actualSurplus>=0?'':'-')+fmt(Math.abs(actualSurplus));
-  document.getElementById('cal-total').style.color=actualSurplus>=0?'var(--green)':'var(--accent)';
+  // Headline: projected surplus for months not yet ended, final for past
+  const headline=ended?actualSurplus:projectedSurplus;
+  document.getElementById('cal-total').textContent=(headline>=0?'':'-')+fmt(Math.abs(headline));
+  document.getElementById('cal-total').style.color=headline>=0?'var(--green)':'var(--accent)';
 
-  let subText=`${label} · ${fmt(ti2)} in · ${fmt(te)} out`;
-  if(!isPastMonth&&(projExp>0||projInc>0)){
-    subText+=` · ~${fmt(projectedSurplus)} proj. end`;
+  // Readout: actual + projected combined totals
+  const totalInAll=ti2+projInc, totalOutAll=te+projExp;
+  let subText;
+  if(ended){
+    subText=`${label} · ${fmt(ti2)} in · ${fmt(te)} out`;
+  } else {
+    subText=`${label} · ${hasProj?'~':''}${fmt(totalInAll)} in · ${hasProj?'~':''}${fmt(totalOutAll)} out`;
+    if(hasProj&&workingTxs.length>0)subText+=` · ${fmt(actualSurplus)} actual so far`;
   }
   subText+=` · ${workingTxs.length} tx`;
   document.getElementById('cal-total-sub').textContent=subText;
@@ -1616,7 +1634,9 @@ async function saveEdit(){
   try{
     await updateTx(editingRowIndex,[date,amount,editingTx.type,cat,src,note,editingTx.recurring||'']);
     showToast('Updated ✓','success');
-    closeSheet('edit-overlay');closeSheet('day-overlay');renderCalendar();
+    closeSheet('edit-overlay');closeSheet('day-overlay');
+    if(document.getElementById('screen-dashboard').classList.contains('active'))renderDashboard();
+    else renderCalendar();
   }catch(e){showToast('Error updating','error');console.error(e);}
 }
 async function deleteTransaction(){
@@ -1625,7 +1645,9 @@ async function deleteTransaction(){
   try{
     await deleteTx(editingRowIndex);
     showToast('Deleted','success');
-    closeSheet('edit-overlay');closeSheet('day-overlay');renderCalendar();
+    closeSheet('edit-overlay');closeSheet('day-overlay');
+    if(document.getElementById('screen-dashboard').classList.contains('active'))renderDashboard();
+    else renderCalendar();
   }catch(e){showToast('Error deleting','error');console.error(e);}
 }
 

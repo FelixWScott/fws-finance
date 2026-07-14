@@ -836,6 +836,26 @@ body{
   </div>
 </div>
 
+<!-- MANAGE RECURRING (skip / end) -->
+<div class="sheet-overlay" id="manage-rec-overlay" onclick="closeSheet('manage-rec-overlay',event)">
+  <div class="bottom-sheet" style="max-height:50vh;">
+    <div class="sheet-handle"></div>
+    <div class="sheet-body">
+      <div class="sheet-title" id="manage-rec-title">Manage recurring</div>
+      <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--muted);margin-bottom:16px;letter-spacing:.04em;" id="manage-rec-sub">—</div>
+      <button onclick="recurringSkipDate()" class="full-btn btn-ghost" style="width:100%;padding:12px;margin-bottom:8px;text-align:left;">
+        <div style="font-size:.85rem;font-weight:700;">⤴ Skip just this date</div>
+        <div style="font-size:.62rem;color:var(--muted);margin-top:2px;font-family:var(--font-mono);">Removes this occurrence only</div>
+      </button>
+      <button onclick="recurringEndFromDate()" class="full-btn btn-ghost" style="width:100%;padding:12px;margin-bottom:8px;text-align:left;border-color:var(--accent);">
+        <div style="font-size:.85rem;font-weight:700;color:var(--accent);">⏹ End from this date</div>
+        <div style="font-size:.62rem;color:var(--muted);margin-top:2px;font-family:var(--font-mono);">Removes this + all future, keeps history</div>
+      </button>
+      <button onclick="closeSheet('manage-rec-overlay')" class="full-btn btn-ghost" style="width:100%;padding:10px;">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -969,7 +989,7 @@ function applyPhaseBudget(){
 
 // Get all dates a recurring item is due between two dates
 function getOccurrences(r, from, to) {
-  const dates = [];
+  let dates = [];
   const freq = r.freq || 'monthly';
   const fo = FREQ_OPTIONS.find(f => f.key === freq);
   if (fo && fo.days) {
@@ -997,6 +1017,14 @@ function getOccurrences(r, from, to) {
       else break;
     }
   }
+  // Respect per-occurrence skips and an end date (exclusive)
+  const skips=r.skipDates||[];
+  dates=dates.filter(d=>{
+    const ds=dateStr(d);
+    if(skips.includes(ds))return false;
+    if(r.endDate&&ds>=r.endDate)return false;
+    return true;
+  });
   return dates;
 }
 
@@ -1033,11 +1061,11 @@ async function sheetsRead(range){
   return(json.values||[]);
 }
 
-// Writes: Apps Script no-cors (fire and forget)
+// Writes: Apps Script no-cors POST (body has no URL-length limit)
 async function scriptWrite(params){
-  const url=new URL(SCRIPT_URL);
-  Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,typeof v==='object'?JSON.stringify(v):String(v)));
-  await fetch(url.toString(),{method:'GET',mode:'no-cors'});
+  const body={};
+  Object.entries(params).forEach(([k,v])=>body[k]=typeof v==='object'?JSON.stringify(v):String(v));
+  await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(body)});
 }
 
 async function initSheet(){
@@ -1294,6 +1322,44 @@ async function renderDashboard(){
       <div class="tx-amount ${t.type}">${t.type==='expense'?'-':'+'}${fmt(t.amount)}</div>
     </div>`;
   }).join(''):`<div class="empty-state"><div class="empty-icon">💸</div>No transactions yet — tap + to add your first</div>`;
+}
+
+// ─── MANAGE RECURRING (skip / end) ────────────────────────
+
+let manageRecId=null, manageRecDate=null;
+
+function openManageRecurring(recId, ds){
+  const r=recurringList.find(x=>x.id===recId);
+  if(!r)return;
+  manageRecId=recId; manageRecDate=ds;
+  const nice=new Date(ds).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+  document.getElementById('manage-rec-title').textContent=r.name;
+  document.getElementById('manage-rec-sub').textContent=`${nice} · ${fmt(r.amount)} · recurring ${r.freq||'monthly'}`;
+  openSheet('manage-rec-overlay');
+}
+
+function recurringSkipDate(){
+  const r=recurringList.find(x=>x.id===manageRecId);
+  if(!r)return;
+  r.skipDates=r.skipDates||[];
+  if(!r.skipDates.includes(manageRecDate))r.skipDates.push(manageRecDate);
+  saveAll();
+  closeSheet('manage-rec-overlay'); closeSheet('day-overlay');
+  if(document.getElementById('screen-dashboard').classList.contains('active'))renderDashboard();
+  else renderCalendar();
+  showToast('Occurrence skipped ✓','success');
+}
+
+function recurringEndFromDate(){
+  const r=recurringList.find(x=>x.id===manageRecId);
+  if(!r)return;
+  // endDate is exclusive — everything on/after this date stops
+  r.endDate=manageRecDate;
+  saveAll();
+  closeSheet('manage-rec-overlay'); closeSheet('day-overlay');
+  if(document.getElementById('screen-dashboard').classList.contains('active'))renderDashboard();
+  else renderCalendar();
+  showToast('Ended from this date ✓','success');
 }
 
 // ─── BUDGET DRILL-DOWN ────────────────────────────────────
@@ -1583,7 +1649,7 @@ function openDaySheet(day){
   const parts=[];if(ts)parts.push(`${fmt(ts)} spent`);if(ti)parts.push(`${fmt(ti)} received`);
   if(projTxs.length){const pt=projTxs.reduce((s,t)=>s+t.amount,0);parts.push(`~${fmt(pt)} projected`);}
   document.getElementById('day-sheet-total').textContent=parts.join(' · ')||'No transactions';
-  document.getElementById('day-sheet-txs').innerHTML=allTxs.length?allTxs.map(t=>{
+  document.getElementById('day-sheet-txs').innerHTML=allTxs.length?allTxs.map((t,i)=>{
     const cat=BUDGET[t.category]||{icon:'💷',label:t.category||'Other'};
     const isProjIncome=t.type==='projected'&&t.source&&t.source.length>0;
     const isIncome=t.type==='income'||isProjIncome;
@@ -1592,8 +1658,12 @@ function openDaySheet(day){
     const icon=isIncome?'💰':cat.icon;
     const projClass=t.projected?'day-tx-proj':'';
     const projTag=t.projected?'<span class="projected-tag"> ~proj</span>':'';
-    const clickFn=t.projected?'':'onclick="openEditSheet('+t._rowIndex+')"';
-    return`<div class="day-tx-item ${projClass}" ${clickFn}>
+    // Real tx → edit sheet; projected recurring (_rowIndex -1) → manage sheet; one-off projections → edit sheet
+    let clickFn='';
+    if(!t.projected) clickFn=`onclick="openEditSheet(${t._rowIndex})"`;
+    else if(t.recurring&&t._rowIndex===-1) clickFn=`onclick="openManageRecurring('${t.recurring}','${dateStr(daySheetDate)}')"`;
+    else if(t._rowIndex>=0) clickFn=`onclick="openEditSheet(${t._rowIndex})"`;
+    return`<div class="day-tx-item ${projClass}" ${clickFn} style="${clickFn?'cursor:pointer;':''}">
       <div class="day-tx-left"><div class="day-tx-icon">${icon}</div>
       <div><div class="day-tx-name">${t.note||cat.label}${projTag}</div><div class="day-tx-note">${cat.label}</div></div></div>
       <div class="day-tx-amount" style="color:${ac}">${px}${fmt(t.amount)}</div>
@@ -2102,7 +2172,10 @@ function updateRecurringAmount(recId, newAmount) {
   showToast(`${r.name} updated to ${fmt(newAmount)} ✓`, 'success');
 }
 
+let queueBusy=false;
 async function approveMonzoItem(idx) {
+  if(queueBusy)return;
+  queueBusy=true;
   const item = monzoQueue[idx];
   try {
     await scriptWrite({action:'approveQueue', item:item});
@@ -2111,9 +2184,12 @@ async function approveMonzoItem(idx) {
     await checkMonzoQueue();
     showToast('Approved ✓', 'success');
   } catch(e) { showToast('Error approving', 'error'); }
+  finally { queueBusy=false; }
 }
 
 async function dismissMonzoItem(idx) {
+  if(queueBusy)return;
+  queueBusy=true;
   const item = monzoQueue[idx];
   try {
     await scriptWrite({action:'dismissQueue', txId:item.txId});
@@ -2122,6 +2198,7 @@ async function dismissMonzoItem(idx) {
     await checkMonzoQueue();
     showToast('Dismissed', '');
   } catch(e) { showToast('Error dismissing', 'error'); }
+  finally { queueBusy=false; }
 }
 
 // Helper for reads that need a response (can't use no-cors)

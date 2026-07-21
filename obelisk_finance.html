@@ -26,6 +26,11 @@
   --font-main:'Rajdhani',sans-serif;
   --font-mono:'Share Tech Mono',monospace;
 }
+body[data-theme="matrix"]{text-shadow:0 0 6px currentColor;}
+body[data-theme="matrix"] .card,body[data-theme="matrix"] .settings-section,body[data-theme="matrix"] .budget-item,
+body[data-theme="matrix"] .sheet-overlay .bottom-sheet{box-shadow:0 0 12px rgba(0,255,65,0.08),inset 0 0 20px rgba(0,255,65,0.02);}
+body[data-theme="matrix"] .toggle-btn.active,body[data-theme="matrix"] .cat-btn.selected,
+body[data-theme="matrix"] .save-btn,body[data-theme="matrix"] .btn-accent{box-shadow:0 0 10px rgba(0,255,65,0.4);}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 body{
   font-family:var(--font-main);
@@ -397,7 +402,7 @@ body{
     <div class="toggle-row" style="grid-template-columns:1fr 1fr 1fr 1fr;">
       <button class="toggle-btn active" id="toggle-expense" onclick="setType('expense')">💸 Expense</button>
       <button class="toggle-btn" id="toggle-income" onclick="setType('income')">💰 Income</button>
-      <button class="toggle-btn" id="toggle-instalment" onclick="setType('instalment')">📅 Instal</button>
+      <button class="toggle-btn" id="toggle-instalment" onclick="setType('instalment')">⏳ Instal</button>
       <button class="toggle-btn" id="toggle-projected" onclick="setType('projected')">🔮 Proj</button>
     </div>
     <div class="field"><label>Amount</label><input type="number" class="amount-input" id="log-amount" placeholder="0.00" step="0.01" min="0" inputmode="decimal"/></div>
@@ -536,10 +541,10 @@ body{
   <div class="settings-section">
     <div class="settings-row" style="cursor:default;">
       <div class="settings-row-left">
-        <div class="settings-row-icon">🎨</div>
+        <div class="settings-row-icon">🖥️</div>
         <div><div class="settings-row-label">Theme</div><div class="settings-row-sub">Visual style</div></div>
       </div>
-      <div style="display:flex;gap:6px;">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <button id="theme-cyber" onclick="setTheme('cyber')"
           style="font-family:var(--font-mono);font-size:.62rem;padding:6px 12px;border-radius:var(--radius);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);">
           CYBER
@@ -547,6 +552,10 @@ body{
         <button id="theme-noir" onclick="setTheme('noir')"
           style="font-family:var(--font-mono);font-size:.62rem;padding:6px 12px;border-radius:var(--radius);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;border:1px solid var(--border);background:transparent;color:var(--muted);">
           NOIR
+        </button>
+        <button id="theme-matrix" onclick="setTheme('matrix')"
+          style="font-family:var(--font-mono);font-size:.62rem;padding:6px 12px;border-radius:var(--radius);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;border:1px solid var(--border);background:transparent;color:var(--muted);">
+          MATRIX
         </button>
       </div>
     </div>
@@ -747,7 +756,7 @@ body{
         <label>Match type</label>
         <div class="toggle-row">
           <button class="toggle-btn active" id="rec-toggle-single" onclick="setRecMatchMode('single')">🎯 Single transaction</button>
-          <button class="toggle-btn" id="rec-toggle-budget" onclick="setRecMatchMode('budget')">📊 Budget allowance</button>
+          <button class="toggle-btn" id="rec-toggle-budget" onclick="setRecMatchMode('budget')">🧮 Budget allowance</button>
         </div>
         <div style="font-family:var(--font-mono);font-size:.58rem;color:var(--muted);margin-top:6px;line-height:1.4;" id="rec-matchmode-hint">One Monzo transaction should match this — flags a warning if it's missed (e.g. Spotify, rent).</div>
       </div>
@@ -2381,8 +2390,62 @@ const THEMES = {
     '--red':'#f05252','--red-soft':'#3d1212',
     '--blue':'#4a9eff','--blue-soft':'#0d2040',
     '--scanline':'rgba(255,255,255,0.008)',
+  },
+  matrix: {
+    '--bg':'#000400','--surface':'#001a00','--surface2':'#002b00','--border':'#0a4a0a',
+    '--text':'#33ff33','--muted':'#1f7a1f','--dim':'#0d3d0d',
+    '--accent':'#00ff41','--accent-soft':'#001f0a',
+    '--yellow':'#adff2f','--yellow-soft':'#1a2600',
+    '--green':'#00ff41','--green-soft':'#001f0a',
+    '--amber':'#adff2f','--amber-soft':'#1a2600',
+    '--red':'#ff3131','--red-soft':'#2a0000',
+    '--blue':'#00ff9c','--blue-soft':'#00201a',
+    '--scanline':'rgba(0,255,65,0.05)',
+    '--font-main':"'Share Tech Mono',monospace",
   }
 };
+
+// ─── ICON THEME (Matrix mode swaps emoji for terminal symbols) ─────
+
+const EMOJI_SYMBOL_MAP = {
+  '🏡':'[BIL]', '🛒':'[GRO]', '☕':'[CAF]', '🐕':'[DOG]', '🚌':'[TRV]',
+  '🛍️':'[SHP]', '🎟️':'[EXP]', '📱':'[SUB]', '🚗':'[DRV]', '💷':'[OTH]',
+  '💰':'[$]', '💸':'[-$]', '💼':'[SAL]', '⚡':'[OT]', '🎨':'[FRL]',
+  '⏳':'[INS]', '🔮':'[PRJ]', '🧮':'[BDG]', '🎯':'[SGL]',
+  '🛡️':'[BUF]', '🔷':'[OBL]', '🏖️':'[HOL]', '🏦':'[BNK]', '🎛️':'[DJ]',
+  '🌴':'[CA$]', '🏠':'[DEP]', '🖥️':'[THM]', '⚙️':'[CFG]', '🔄':'[SYNC]',
+  '📈':'[STA]', '📊':'[HOM]', '📅':'[CAL]', '🎉':'[!!]', '📭':'[--]',
+  '⚠':'[!]', '✅':'[OK]',
+};
+
+function applyIconTheme(){
+  const toSymbol = currentTheme==='matrix';
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  let n;
+  while ((n = walker.nextNode())) nodes.push(n);
+  nodes.forEach(node=>{
+    let t = node.nodeValue;
+    let changed = false;
+    for (const [emoji, symbol] of Object.entries(EMOJI_SYMBOL_MAP)){
+      if (toSymbol) {
+        if (t.includes(emoji)) { t = t.split(emoji).join(symbol); changed = true; }
+      } else {
+        if (t.includes(symbol)) { t = t.split(symbol).join(emoji); changed = true; }
+      }
+    }
+    if (changed) node.nodeValue = t;
+  });
+}
+
+let iconObserver = null;
+function setupIconObserver(){
+  if (iconObserver) iconObserver.disconnect();
+  iconObserver = new MutationObserver(()=>{
+    if (currentTheme==='matrix') applyIconTheme();
+  });
+  iconObserver.observe(document.body, {childList:true, subtree:true, characterData:true});
+}
 
 let currentTheme = 'cyber';
 
@@ -2398,34 +2461,31 @@ function applyTheme(name) {
   const root = document.documentElement;
   Object.entries(vars).forEach(([k, v]) => {
     if (k === '--scanline') {
-      // Update scanline in body background
       document.body.style.backgroundImage =
         `repeating-linear-gradient(0deg,transparent,transparent 2px,${v} 2px,${v} 4px)`;
     } else {
       root.style.setProperty(k, v);
     }
   });
+  document.body.dataset.theme = name;
+  applyIconTheme();
 }
 
 function updateThemeButtons(name) {
-  const cyber = document.getElementById('theme-cyber');
-  const noir  = document.getElementById('theme-noir');
-  if (!cyber || !noir) return;
-  if (name === 'cyber') {
-    cyber.style.background = 'var(--accent-soft)';
-    cyber.style.borderColor = 'var(--accent)';
-    cyber.style.color = 'var(--accent)';
-    noir.style.background = 'transparent';
-    noir.style.borderColor = 'var(--border)';
-    noir.style.color = 'var(--muted)';
-  } else {
-    noir.style.background = 'var(--accent-soft)';
-    noir.style.borderColor = 'var(--accent)';
-    noir.style.color = 'var(--accent)';
-    cyber.style.background = 'transparent';
-    cyber.style.borderColor = 'var(--border)';
-    cyber.style.color = 'var(--muted)';
-  }
+  const ids = {cyber:'theme-cyber', noir:'theme-noir', matrix:'theme-matrix'};
+  Object.entries(ids).forEach(([key, id]) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    if (key === name) {
+      btn.style.background = 'var(--accent-soft)';
+      btn.style.borderColor = 'var(--accent)';
+      btn.style.color = 'var(--accent)';
+    } else {
+      btn.style.background = 'transparent';
+      btn.style.borderColor = 'var(--border)';
+      btn.style.color = 'var(--muted)';
+    }
+  });
 }
 
 // ─── INIT ─────────────────────────────────────────────────
@@ -2436,6 +2496,7 @@ async function init(){
   const savedTheme=localStorage.getItem('fwsTheme')||'cyber';
   currentTheme=savedTheme;
   applyTheme(savedTheme);
+  setupIconObserver();
   await initSheet();
   // Sync pots and settings from Sheet (source of truth)
   const synced=await syncFromSheet();

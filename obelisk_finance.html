@@ -26,11 +26,11 @@
   --font-main:'Rajdhani',sans-serif;
   --font-mono:'Share Tech Mono',monospace;
 }
-body[data-theme="matrix"]{text-shadow:0 0 6px currentColor;}
-body[data-theme="matrix"] .card,body[data-theme="matrix"] .settings-section,body[data-theme="matrix"] .budget-item,
-body[data-theme="matrix"] .sheet-overlay .bottom-sheet{box-shadow:0 0 12px rgba(0,255,65,0.08),inset 0 0 20px rgba(0,255,65,0.02);}
-body[data-theme="matrix"] .toggle-btn.active,body[data-theme="matrix"] .cat-btn.selected,
-body[data-theme="matrix"] .save-btn,body[data-theme="matrix"] .btn-accent{box-shadow:0 0 10px rgba(0,255,65,0.4);}
+body[data-theme="terminal"]{text-shadow:0 0 3px currentColor;}
+body[data-theme="terminal"] .card,body[data-theme="terminal"] .settings-section,body[data-theme="terminal"] .budget-item,
+body[data-theme="terminal"] .sheet-overlay .bottom-sheet{box-shadow:0 0 6px rgba(0,255,65,0.04),inset 0 0 12px rgba(0,255,65,0.015);}
+body[data-theme="terminal"] .toggle-btn.active,body[data-theme="terminal"] .cat-btn.selected,
+body[data-theme="terminal"] .save-btn,body[data-theme="terminal"] .btn-accent{box-shadow:0 0 5px rgba(0,255,65,0.22);}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 body{
   font-family:var(--font-main);
@@ -553,9 +553,9 @@ body{
           style="font-family:var(--font-mono);font-size:.62rem;padding:6px 12px;border-radius:var(--radius);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;border:1px solid var(--border);background:transparent;color:var(--muted);">
           NOIR
         </button>
-        <button id="theme-matrix" onclick="setTheme('matrix')"
+        <button id="theme-terminal" onclick="setTheme('terminal')"
           style="font-family:var(--font-mono);font-size:.62rem;padding:6px 12px;border-radius:var(--radius);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;border:1px solid var(--border);background:transparent;color:var(--muted);">
-          MATRIX
+          TERMINAL
         </button>
       </div>
     </div>
@@ -2391,7 +2391,7 @@ const THEMES = {
     '--blue':'#4a9eff','--blue-soft':'#0d2040',
     '--scanline':'rgba(255,255,255,0.008)',
   },
-  matrix: {
+  terminal: {
     '--bg':'#000400','--surface':'#001a00','--surface2':'#002b00','--border':'#0a4a0a',
     '--text':'#33ff33','--muted':'#1f7a1f','--dim':'#0d3d0d',
     '--accent':'#00ff41','--accent-soft':'#001f0a',
@@ -2400,12 +2400,12 @@ const THEMES = {
     '--amber':'#adff2f','--amber-soft':'#1a2600',
     '--red':'#ff3131','--red-soft':'#2a0000',
     '--blue':'#00ff9c','--blue-soft':'#00201a',
-    '--scanline':'rgba(0,255,65,0.05)',
+    '--scanline':'rgba(0,255,65,0.035)',
     '--font-main':"'Share Tech Mono',monospace",
   }
 };
 
-// ─── ICON THEME (Matrix mode swaps emoji for terminal symbols) ─────
+// ─── ICON THEME (Terminal mode swaps emoji for terminal symbols) ─────
 
 const EMOJI_SYMBOL_MAP = {
   '🏡':'[BIL]', '🛒':'[GRO]', '☕':'[CAF]', '🐕':'[DOG]', '🚌':'[TRV]',
@@ -2419,7 +2419,7 @@ const EMOJI_SYMBOL_MAP = {
 };
 
 function applyIconTheme(){
-  const toSymbol = currentTheme==='matrix';
+  const toSymbol = currentTheme==='terminal';
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   const nodes = [];
   let n;
@@ -2442,7 +2442,7 @@ let iconObserver = null;
 function setupIconObserver(){
   if (iconObserver) iconObserver.disconnect();
   iconObserver = new MutationObserver(()=>{
-    if (currentTheme==='matrix') applyIconTheme();
+    if (currentTheme==='terminal') applyIconTheme();
   });
   iconObserver.observe(document.body, {childList:true, subtree:true, characterData:true});
 }
@@ -2472,7 +2472,7 @@ function applyTheme(name) {
 }
 
 function updateThemeButtons(name) {
-  const ids = {cyber:'theme-cyber', noir:'theme-noir', matrix:'theme-matrix'};
+  const ids = {cyber:'theme-cyber', noir:'theme-noir', terminal:'theme-terminal'};
   Object.entries(ids).forEach(([key, id]) => {
     const btn = document.getElementById(id);
     if (!btn) return;
@@ -2493,7 +2493,8 @@ function updateThemeButtons(name) {
 async function init(){
   loadAll();
   applyPhaseBudget();
-  const savedTheme=localStorage.getItem('fwsTheme')||'cyber';
+  let savedTheme=localStorage.getItem('fwsTheme')||'cyber';
+  if(savedTheme==='matrix')savedTheme='terminal'; // old name, migrate silently
   currentTheme=savedTheme;
   applyTheme(savedTheme);
   setupIconObserver();

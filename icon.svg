@@ -1,7 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" fill="#0d0d0d"/>
-  <rect width="512" height="4" y="0" fill="#e8002a"/>
-  <rect width="512" height="4" y="508" fill="#e8002a"/>
-  <text y="340" x="256" text-anchor="middle" font-size="320" font-family="monospace" font-weight="bold" fill="#e8002a">F</text>
-  <text y="420" x="256" text-anchor="middle" font-size="48" font-family="monospace" fill="#f5c400" letter-spacing="8">FWS</text>
+  <!-- Obelisk crystal — faceted gem shape -->
+  <g stroke="#f5c400" stroke-width="5" stroke-linejoin="round">
+    <polygon points="256,68 186,172 160,272 256,272" fill="#8a0018"/>
+    <polygon points="256,68 326,172 352,272 256,272" fill="#ff2d4d"/>
+    <polygon points="256,272 160,272 202,404 256,460" fill="#6b0012"/>
+    <polygon points="256,272 352,272 310,404 256,460" fill="#e8002a"/>
+  </g>
 </svg>

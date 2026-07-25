@@ -2207,6 +2207,23 @@ function renderMonzoQueue() {
       <input type="text" placeholder="Add a note (optional)" value="${item.note||''}"
         oninput="updateQueueNote(${idx},this.value)"
         style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:8px;font-family:var(--font-mono);font-size:.68rem;outline:none;margin-bottom:8px;"/>
+      ${`
+      <div style="border-top:1px solid var(--border);padding-top:8px;margin-bottom:8px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-family:var(--font-mono);font-size:.68rem;color:var(--text);">
+          <input type="checkbox" ${item.makeRecurring?'checked':''} onchange="toggleQueueMakeRecurring(${idx},this.checked)" style="width:16px;height:16px;accent-color:var(--accent);"/>
+          🔁 Make this recurring
+        </label>
+        ${item.makeRecurring?`
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">
+          <select onchange="updateQueueRecFreq(${idx},this.value)" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px;font-family:var(--font-mono);font-size:.65rem;outline:none;-webkit-appearance:none;">
+            ${FREQ_OPTIONS.map(f=>`<option value="${f.key}" ${(item.recFreq||'monthly')===f.key?'selected':''}>${f.label}</option>`).join('')}
+          </select>
+          <select onchange="updateQueueRecMatchMode(${idx},this.value)" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px;font-family:var(--font-mono);font-size:.65rem;outline:none;-webkit-appearance:none;">
+            <option value="single" ${(item.recMatchMode||'single')==='single'?'selected':''}>🎯 Single tx</option>
+            <option value="budget" ${item.recMatchMode==='budget'?'selected':''}>🧮 Budget</option>
+          </select>
+        </div>`:''}
+      </div>`}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
         <button onclick="dismissMonzoItem(${idx})" class="full-btn btn-ghost" style="padding:8px;font-size:.65rem;">✕ Dismiss</button>
         <button onclick="approveMonzoItem(${idx})" class="full-btn btn-accent" style="padding:8px;font-size:.65rem;">✓ Approve</button>
@@ -2219,6 +2236,9 @@ function updateQueueCat(idx, cat)        { monzoQueue[idx].fwsCat    = cat; }
 function updateQueueSource(idx, source)  { monzoQueue[idx].fwsSource = source; }
 function updateQueueRecurring(idx, recId){ monzoQueue[idx].recurringId = recId; }
 function updateQueueNote(idx, note)      { monzoQueue[idx].note = note; }
+function toggleQueueMakeRecurring(idx, checked){ monzoQueue[idx].makeRecurring = checked; renderMonzoQueue(); }
+function updateQueueRecFreq(idx, freq)   { monzoQueue[idx].recFreq = freq; }
+function updateQueueRecMatchMode(idx, mode){ monzoQueue[idx].recMatchMode = mode; }
 
 function updateRecurringAmount(recId, newAmount) {
   const r = recurringList.find(x => x.id === recId);
@@ -2234,11 +2254,33 @@ async function approveMonzoItem(idx) {
   queueBusy=true;
   const item = monzoQueue[idx];
   try {
+    // If flagged, create a new recurring template from this transaction first
+    if (item.makeRecurring) {
+      const isIncome = item.isIncome === true || item.isIncome === 'true' || item.isIncome === 'TRUE';
+      const freq = item.recFreq || 'monthly';
+      const fo = FREQ_OPTIONS.find(f => f.key === freq);
+      const txDate = new Date(item.date);
+      const newRec = {
+        id: `rec_${Date.now()}`,
+        name: item.name,
+        amount: item.amount,
+        freq,
+        day: fo && fo.days ? null : txDate.getDate(),
+        startDate: fo && fo.days ? item.date : '',
+        cat: isIncome ? '' : item.fwsCat,
+        type: isIncome ? 'income' : 'expense',
+        source: isIncome ? (item.fwsSource||'salary') : '',
+        matchMode: item.recMatchMode || 'single',
+      };
+      recurringList.push(newRec);
+      saveAll();
+      item.recurringId = newRec.id;
+    }
     await scriptWrite({action:'approveQueue', item:item});
     monzoQueue.splice(idx, 1);
     renderMonzoQueue();
     await checkMonzoQueue();
-    showToast('Approved ✓', 'success');
+    showToast(item.makeRecurring?'Approved + recurring created ✓':'Approved ✓', 'success');
   } catch(e) { showToast('Error approving', 'error'); }
   finally { queueBusy=false; }
 }
@@ -2427,7 +2469,7 @@ const EMOJI_SYMBOL_MAP = {
   '🛡️':'[BUF]', '🔷':'[OBL]', '🏖️':'[HOL]', '🏦':'[BNK]', '🎛️':'[DJ]',
   '🌴':'[CA$]', '🏠':'[DEP]', '🖥️':'[THM]', '⚙️':'[CFG]', '🔄':'[SYNC]',
   '📈':'[STA]', '📊':'[HOM]', '📅':'[CAL]', '🎉':'[!!]', '📭':'[--]',
-  '⚠':'[!]', '✅':'[OK]',
+  '⚠':'[!]', '✅':'[OK]', '🔁':'[REC]',
 };
 
 function applyIconTheme(){

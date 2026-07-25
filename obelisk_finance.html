@@ -200,7 +200,7 @@ body{
 .tx-list{padding:0 16px;display:flex;flex-direction:column;gap:8px;}
 .tx-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;display:flex;justify-content:space-between;align-items:center;}
 .tx-left{display:flex;align-items:center;gap:10px;}
-.tx-icon{width:36px;height:36px;border-radius:10px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.tx-icon{min-width:36px;width:auto;height:36px;padding:0 6px;border-radius:10px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;white-space:nowrap;}
 .tx-name{font-size:.82rem;font-weight:600;}
 .tx-meta{font-size:.68rem;color:var(--muted);margin-top:1px;}
 .tx-amount{font-size:.9rem;font-weight:700;}
@@ -261,7 +261,7 @@ body{
 /* DAY SHEET TX ITEMS */
 .day-tx-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;margin-bottom:8px;}
 .day-tx-left{display:flex;align-items:center;gap:10px;}
-.day-tx-icon{width:32px;height:32px;background:var(--surface);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+.day-tx-icon{min-width:32px;width:auto;height:32px;padding:0 5px;background:var(--surface);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;white-space:nowrap;}
 .day-tx-name{font-size:.82rem;font-weight:600;}
 .day-tx-note{font-size:.68rem;color:var(--muted);margin-top:1px;}
 .day-tx-amount{font-size:.88rem;font-weight:700;}
@@ -287,7 +287,7 @@ body{
 .settings-row{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;}
 .settings-row:last-child{border-bottom:none;}
 .settings-row-left{display:flex;align-items:center;gap:10px;}
-.settings-row-icon{font-size:1.1rem;width:28px;text-align:center;}
+.settings-row-icon{font-size:1.1rem;min-width:28px;flex-shrink:0;text-align:center;white-space:nowrap;}
 .settings-row-label{font-size:.85rem;font-weight:600;}
 .settings-row-sub{font-size:.68rem;color:var(--muted);margin-top:1px;}
 .settings-row-right{font-size:.78rem;color:var(--muted);display:flex;align-items:center;gap:6px;}
@@ -296,7 +296,7 @@ body{
 .recurring-item{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;}
 .recurring-item:last-child{border-bottom:none;}
 .recurring-item-left{display:flex;align-items:center;gap:10px;}
-.recurring-icon{width:34px;height:34px;background:var(--surface2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+.recurring-icon{min-width:34px;width:auto;height:34px;padding:0 6px;background:var(--surface2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;white-space:nowrap;}
 .recurring-name{font-size:.82rem;font-weight:600;}
 .recurring-meta{font-size:.68rem;color:var(--muted);margin-top:1px;}
 .recurring-amount{font-size:.88rem;font-weight:700;color:var(--red);}

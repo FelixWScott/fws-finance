@@ -1926,17 +1926,56 @@ function renderSettings(){
     <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">Total committed</div>
     <div style="font-family:var(--font-mono);font-size:.88rem;color:var(--yellow);">${fmt(budgetTotal)}/mo</div>
   </div>`;
-  document.getElementById('recurring-list').innerHTML=recurringList.length?recurringList.map(r=>{
+  // Group recurring payments: Income first, then by expense category
+  const catOrder=['bills','groceries','coffee','dog','travel','shopping','experiences','subscriptions','driving','other'];
+  const incomeItems=recurringList.filter(r=>r.type==='income');
+  const expenseByCat={};
+  recurringList.filter(r=>r.type!=='income').forEach(r=>{
+    const c=r.cat||'other';
+    (expenseByCat[c]=expenseByCat[c]||[]).push(r);
+  });
+
+  const freqLabel={weekly:'Weekly',fortnightly:'Fortnightly','3weekly':'Every 3 weeks','4weekly':'Every 4 weeks',monthly:'Monthly',quarterly:'Quarterly',annually:'Annually'};
+
+  function renderRecItem(r){
     const cat=BUDGET[r.cat]||{icon:'💷'};
-    const freqLabel={weekly:'Weekly',fortnightly:'Fortnightly','3weekly':'Every 3 weeks','4weekly':'Every 4 weeks',monthly:'Monthly',quarterly:'Quarterly',annually:'Annually'}[r.freq||'monthly']||'Monthly';
+    const fLabel=freqLabel[r.freq||'monthly']||'Monthly';
     const typeLabel=r.type==='income'?'↑ Income':'↓ Expense';
     const amtColor=r.type==='income'?'var(--green)':'var(--accent)';
     return`<div class="recurring-item" onclick="openEditRecurring('${r.id}')">
       <div class="recurring-item-left"><div class="recurring-icon">${r.type==='income'?'💰':cat.icon}</div>
-      <div><div class="recurring-name">${r.name}</div><div class="recurring-meta">${freqLabel} · ${typeLabel}</div></div></div>
+      <div><div class="recurring-name">${r.name}</div><div class="recurring-meta">${fLabel} · ${typeLabel}</div></div></div>
       <div class="recurring-amount" style="color:${amtColor}">${fmt(r.amount)}</div>
     </div>`;
-  }).join(''):`<div class="empty-state" style="padding:20px;">No recurring payments</div>`;
+  }
+
+  function renderRecGroup(icon,label,items,total,color){
+    return`<div style="padding:7px 16px;background:var(--surface2);display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);">
+      <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">${icon} ${label}</div>
+      <div style="font-family:var(--font-mono);font-size:.62rem;color:${color};">${fmt(total)}</div>
+    </div>` + items.map(renderRecItem).join('');
+  }
+
+  let groupsHtml='';
+  if(incomeItems.length){
+    const total=incomeItems.reduce((s,r)=>s+r.amount,0);
+    groupsHtml+=renderRecGroup('💰','Income',incomeItems,total,'var(--green)');
+  }
+  catOrder.forEach(c=>{
+    if(expenseByCat[c]&&expenseByCat[c].length){
+      const b=BUDGET[c]||{icon:'💷',label:c};
+      const total=expenseByCat[c].reduce((s,r)=>s+r.amount,0);
+      groupsHtml+=renderRecGroup(b.icon,b.label,expenseByCat[c],total,'var(--accent)');
+      delete expenseByCat[c];
+    }
+  });
+  Object.keys(expenseByCat).forEach(c=>{
+    const b=BUDGET[c]||{icon:'💷',label:c};
+    const total=expenseByCat[c].reduce((s,r)=>s+r.amount,0);
+    groupsHtml+=renderRecGroup(b.icon,b.label,expenseByCat[c],total,'var(--accent)');
+  });
+
+  document.getElementById('recurring-list').innerHTML=recurringList.length?groupsHtml:`<div class="empty-state" style="padding:20px;">No recurring payments</div>`;
 }
 function openPhaseSheet(){
   selectedPhase=currentPhase;

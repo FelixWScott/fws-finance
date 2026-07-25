@@ -1055,15 +1055,27 @@ function dateStr(d) {
 // Check if a transaction matches a recurring item (by ID or name, within ±2 days)
 function matchesRecurring(txs, r, targetDate) {
   const target = new Date(targetDate);
+  const rType = r.type || 'expense';
   return txs.some(t => {
     if (!t.date) return false;
+    // A projection can never "fulfil" a recurring occurrence — only a real
+    // logged transaction (expense/income/transfer) counts as a match
+    if (t.type === 'projected') return false;
+    // Income recurring can only be matched by income transactions, and
+    // vice versa — prevents e.g. "Saz rent" (income) satisfying "Rent" (expense)
+    if (t.type !== rType) return false;
     const tDate = new Date(t.date);
     const diffDays = Math.abs((tDate - target) / 86400000);
     if (diffDays > 2) return false;
     // Match by recurring ID
     if (t.recurring === r.id) return true;
-    // Match by name (Monzo imports)
-    if (t.note && t.note.toLowerCase().includes(r.name.toLowerCase())) return true;
+    // Match by name — whole word, not a raw substring (avoids "rent" matching
+    // inside "Saz rent" or "current")
+    if (t.note) {
+      const escaped = r.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp('\\b' + escaped + '\\b', 'i');
+      if (re.test(t.note)) return true;
+    }
     return false;
   });
 }

@@ -438,18 +438,7 @@ body{
 
     <div class="field" id="field-category">
       <label>Category</label>
-      <div class="cat-grid">
-        <button class="cat-btn" data-cat="bills" onclick="selectCat(this)"><span class="cat-icon">🏡</span>Bills</button>
-        <button class="cat-btn" data-cat="groceries" onclick="selectCat(this)"><span class="cat-icon">🛒</span>Groceries</button>
-        <button class="cat-btn" data-cat="coffee" onclick="selectCat(this)"><span class="cat-icon">☕</span>Coffee</button>
-        <button class="cat-btn" data-cat="dog" onclick="selectCat(this)"><span class="cat-icon">🐕</span>Dog</button>
-        <button class="cat-btn" data-cat="travel" onclick="selectCat(this)"><span class="cat-icon">🚌</span>Travel</button>
-        <button class="cat-btn" data-cat="shopping" onclick="selectCat(this)"><span class="cat-icon">🛍️</span>Shopping</button>
-        <button class="cat-btn" data-cat="experiences" onclick="selectCat(this)"><span class="cat-icon">🎟️</span>Experiences</button>
-        <button class="cat-btn" data-cat="subscriptions" onclick="selectCat(this)"><span class="cat-icon">📱</span>Subscriptions</button>
-        <button class="cat-btn" data-cat="driving" onclick="selectCat(this)"><span class="cat-icon">🚗</span>Driving</button>
-        <button class="cat-btn" data-cat="other" onclick="selectCat(this)"><span class="cat-icon">💷</span>Other</button>
-      </div>
+      <div class="cat-grid" id="log-cat-grid"></div>
     </div>
     <div class="field" id="field-source" style="display:none;">
       <label>Source</label>
@@ -530,8 +519,11 @@ body{
       <div class="settings-row-right"><span class="phase-badge-sm" id="settings-phase-badge">—</span><span class="settings-chevron">›</span></div>
     </div>
   </div>
-  <div class="section-label">Monthly budget</div>
+  <div class="section-label">Spending categories</div>
   <div class="settings-section" id="budget-settings-list"></div>
+  <div style="padding:0 16px;margin-bottom:16px;">
+    <button onclick="openAddCategory()" style="width:100%;background:var(--surface);border:1px dashed var(--border);border-radius:var(--radius-sm);color:var(--muted);padding:14px;font-size:.82rem;cursor:pointer;font-family:var(--font-mono);letter-spacing:.08em;text-transform:uppercase;">+ Add category</button>
+  </div>
   <div class="section-label">Recurring payments</div>
   <div class="settings-section" id="recurring-list"></div>
   <div style="padding:0 16px;margin-bottom:16px;">
@@ -633,18 +625,7 @@ body{
       <div class="field"><label>Amount</label><input type="number" class="amount-input" id="edit-amount" step="0.01" min="0" inputmode="decimal"/></div>
       <div class="field" id="edit-cat-field">
         <label>Category</label>
-        <div class="cat-grid" id="edit-cat-grid">
-          <button class="cat-btn" data-cat="bills" onclick="editSelectCat(this)"><span class="cat-icon">🏡</span>Bills</button>
-          <button class="cat-btn" data-cat="groceries" onclick="editSelectCat(this)"><span class="cat-icon">🛒</span>Groceries</button>
-          <button class="cat-btn" data-cat="coffee" onclick="editSelectCat(this)"><span class="cat-icon">☕</span>Coffee</button>
-          <button class="cat-btn" data-cat="dog" onclick="editSelectCat(this)"><span class="cat-icon">🐕</span>Dog</button>
-          <button class="cat-btn" data-cat="travel" onclick="editSelectCat(this)"><span class="cat-icon">🚌</span>Travel</button>
-          <button class="cat-btn" data-cat="shopping" onclick="editSelectCat(this)"><span class="cat-icon">🛍️</span>Shopping</button>
-          <button class="cat-btn" data-cat="experiences" onclick="editSelectCat(this)"><span class="cat-icon">🎟️</span>Experiences</button>
-          <button class="cat-btn" data-cat="subscriptions" onclick="editSelectCat(this)"><span class="cat-icon">📱</span>Subscriptions</button>
-          <button class="cat-btn" data-cat="driving" onclick="editSelectCat(this)"><span class="cat-icon">🚗</span>Driving</button>
-          <button class="cat-btn" data-cat="other" onclick="editSelectCat(this)"><span class="cat-icon">💷</span>Other</button>
-        </div>
+        <div class="cat-grid" id="edit-cat-grid"></div>
       </div>
       <div class="field" id="edit-src-field" style="display:none;">
         <label>Source</label>
@@ -703,11 +684,8 @@ body{
       <div class="field"><label>Target date (optional)</label><input type="date" id="goal-date" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:14px;font-size:1rem;width:100%;outline:none;font-family:var(--font-mono);"/></div>
       <div class="field">
         <label>Show during</label>
-        <select id="goal-phase" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:14px;font-size:.9rem;width:100%;outline:none;-webkit-appearance:none;font-family:var(--font-mono);">
-          <option value="all">All phases</option>
-          <option value="s1">S1 phase only</option>
-          <option value="ilp">ILP phases only</option>
-        </select>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;text-transform:none;letter-spacing:normal;font-size:.85rem;color:var(--text);margin-bottom:8px;"><input type="checkbox" id="goal-phase-all" onchange="toggleGoalPhaseAll()" style="width:16px;height:16px;"/> All phases</label>
+        <div id="goal-phase-fields" style="display:flex;flex-direction:column;gap:8px;"></div>
       </div>
       <div class="field" style="display:flex;flex-direction:column;gap:10px;">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;text-transform:none;letter-spacing:normal;font-size:.85rem;color:var(--text);"><input type="checkbox" id="goal-milestone" style="width:16px;height:16px;"/> Priority goal (highlighted)</label>
@@ -761,14 +739,42 @@ body{
   </div>
 </div>
 
-<!-- BUDGET EDIT SHEET -->
+<!-- CATEGORY EDIT SHEET -->
 <div class="sheet-overlay" id="budget-edit-overlay" onclick="closeSheet('budget-edit-overlay',event)">
   <div class="bottom-sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-body">
-      <div class="sheet-title" id="budget-edit-title">Edit budget</div>
-      <div class="field"><label>Monthly limit</label><input type="number" class="amount-input" id="budget-edit-input" step="0.01" min="0" inputmode="decimal"/></div>
-      <button onclick="saveBudgetEdit()" class="full-btn btn-accent">Save</button>
+      <div class="sheet-title" id="cat-edit-title">Edit category</div>
+      <div class="two-col">
+        <div class="field"><label>Icon (emoji)</label><input type="text" id="cat-edit-icon" placeholder="💷" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:14px;font-size:1.3rem;width:100%;outline:none;text-align:center;"/></div>
+        <div class="field"><label>Monthly limit</label><input type="number" id="cat-edit-limit" placeholder="No limit" step="0.01" min="0" inputmode="decimal" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:14px;font-size:1rem;width:100%;outline:none;font-family:var(--font-mono);"/></div>
+      </div>
+      <div class="field"><label>Name</label><input type="text" id="cat-edit-label" placeholder="e.g. Hobbies" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:14px;font-size:1rem;width:100%;outline:none;font-family:var(--font-main);"/></div>
+      <div class="two-col" style="margin-top:8px;">
+        <button id="cat-delete-btn" onclick="deleteCategory()" class="full-btn btn-red" style="display:none;">Delete</button>
+        <button onclick="saveCategoryEdit()" id="cat-save-btn" class="full-btn btn-accent" style="grid-column:1/-1;">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PHASE EDIT SHEET -->
+<div class="sheet-overlay" id="phase-edit-overlay" onclick="closeSheet('phase-edit-overlay',event)">
+  <div class="bottom-sheet" style="max-height:90vh;">
+    <div class="sheet-handle"></div>
+    <div class="sheet-body">
+      <div class="sheet-title" id="phase-edit-title">Add phase</div>
+      <div class="field"><label>Name</label><input type="text" id="phase-name" placeholder="e.g. New job" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:14px;font-size:1rem;width:100%;outline:none;font-family:var(--font-main);"/></div>
+      <div class="field"><label>Description</label><textarea id="phase-desc" placeholder="What's true during this phase?" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:12px;font-size:.9rem;width:100%;outline:none;resize:none;height:60px;font-family:var(--font-main);"></textarea></div>
+      <div class="field">
+        <label>Budget overrides (optional)</label>
+        <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--muted);margin-bottom:10px;">Leave blank to keep a category's normal limit during this phase.</div>
+        <div id="phase-budget-fields"></div>
+      </div>
+      <div class="two-col" style="margin-top:8px;">
+        <button id="phase-delete-btn" onclick="deletePhaseDefinition()" class="full-btn btn-red" style="display:none;">Delete</button>
+        <button onclick="savePhaseDefinition()" id="phase-save-btn" class="full-btn btn-accent" style="grid-column:1/-1;">Save</button>
+      </div>
     </div>
   </div>
 </div>
@@ -831,18 +837,7 @@ body{
       <!-- Category (expense) -->
       <div class="field" id="rec-cat-field">
         <label>Category</label>
-        <select id="rec-cat" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:14px;font-size:.9rem;width:100%;outline:none;-webkit-appearance:none;font-family:var(--font-mono);">
-          <option value="bills">🏡 Home & Bills</option>
-          <option value="groceries">🛒 Groceries</option>
-          <option value="coffee">☕ Coffee & snacks</option>
-          <option value="dog">🐕 Dog</option>
-          <option value="travel">🚌 Travel</option>
-          <option value="shopping">🛍️ Shopping</option>
-          <option value="experiences">🎟️ Experiences</option>
-          <option value="subscriptions">📱 Subscriptions</option>
-          <option value="driving">🚗 Driving</option>
-          <option value="other">💷 Other</option>
-        </select>
+        <select id="rec-cat" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:14px;font-size:.9rem;width:100%;outline:none;-webkit-appearance:none;font-family:var(--font-mono);"></select>
       </div>
 
       <!-- Source (income) -->
@@ -924,7 +919,12 @@ const SHEETS_BASE=`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`;
 
 
 
-const BUDGET={
+// Spending categories — fully user-editable (add/edit/delete in Settings).
+// limit:null means "no monthly limit" (untracked in budget bars).
+// locked:true marks categories wired into dedicated features (driving lessons
+// widget, surplus-allocation transfers, default fallback) — label/icon/limit
+// stay editable but they can't be deleted.
+const DEFAULT_CATEGORIES={
   bills:         {label:'Home & Bills',          icon:'🏡',limit:2309},
   groceries:     {label:'Groceries & eating out', icon:'🛒',limit:400},
   coffee:        {label:'Coffee & snacks',        icon:'☕',limit:60},
@@ -933,39 +933,40 @@ const BUDGET={
   shopping:      {label:'Shopping & self-care',   icon:'🛍️',limit:200},
   experiences:   {label:'Experiences',            icon:'🎟️',limit:300},
   subscriptions: {label:'Subscriptions',          icon:'📱',limit:124.37},
-  driving:       {label:'Driving',                icon:'🚗',limit:null},
-  savings:       {label:'Savings transfer',       icon:'💰',limit:null},
-  other:         {label:'Other',                  icon:'💷',limit:null},
+  driving:       {label:'Driving',                icon:'🚗',limit:null,locked:true},
+  savings:       {label:'Savings transfer',       icon:'💰',limit:null,locked:true},
+  other:         {label:'Other',                  icon:'💷',limit:null,locked:true},
 };
-
-const PHASE_BUDGETS={
-  's1':         {bills:2309,groceries:600,coffee:60,dog:125,travel:200,shopping:200,experiences:300,subscriptions:154.36},
-  'pre-ilp':    {bills:2309,groceries:600,coffee:60,dog:125,travel:200,shopping:200,experiences:300,subscriptions:154.36},
-  'ilp-premove':{bills:2309,groceries:600,coffee:60,dog:125,travel:200,shopping:100,experiences:0,  subscriptions:124.37},
-  'ilp-1-6':    {bills:1647,groceries:400,coffee:60,dog:125,travel:200,shopping:200,experiences:300,subscriptions:124.37},
-  'ilp-7plus':  {bills:1324,groceries:400,coffee:60,dog:125,travel:200,shopping:200,experiences:300,subscriptions:124.37},
-};
+let BUDGET={};
 
 // Savings goals — fully user-editable (add/edit/delete in the Savings screen).
-// phaseGroup: 'all' | 's1' | 'ilp' — controls which life-stage phase shows the goal.
+// phases: array of specific phase keys the goal shows during; [] = all phases.
 // targetDate (optional): drives the "£/mo needed" pace calculator.
 const DEFAULT_POTS=[
-  {key:'california',label:'California',       icon:'🌴',target:3000,color:'#22c98a',milestone:false,resettable:false,isa:true,phaseGroup:'s1', targetDate:''},
-  {key:'buffer',    label:'Emergency Buffer',  icon:'🛡️',target:3657,color:'#4a9eff',milestone:false,resettable:false,isa:true,phaseGroup:'all',targetDate:''},
-  {key:'holidays',  label:'Small Holidays',    icon:'🏖️',target:600, color:'#8b5cf6',milestone:false,resettable:true, isa:true,phaseGroup:'s1', targetDate:''},
-  {key:'obelisk',   label:'Obelisk',           icon:'🔷',target:2000,color:'#0ea5e9',milestone:false,resettable:false,isa:true,phaseGroup:'all',targetDate:''},
-  {key:'deposit',   label:'Deposit',           icon:'🏠',target:1800,color:'#f5a623',milestone:true, resettable:false,isa:true,phaseGroup:'ilp',targetDate:''},
-  {key:'holiday',   label:'Holiday Fund',      icon:'🏖️',target:1200,color:'#8b5cf6',milestone:false,resettable:true, isa:true,phaseGroup:'ilp',targetDate:''},
-  {key:'dj',        label:'DJ Controller',     icon:'🎛️',target:1000,color:'#ec4899',milestone:false,resettable:false,isa:true,phaseGroup:'ilp',targetDate:''},
+  {key:'california',label:'California',       icon:'🌴',target:3000,color:'#22c98a',milestone:false,resettable:false,isa:true,phases:['s1'],targetDate:''},
+  {key:'buffer',    label:'Emergency Buffer',  icon:'🛡️',target:3657,color:'#4a9eff',milestone:false,resettable:false,isa:true,phases:[],targetDate:''},
+  {key:'holidays',  label:'Small Holidays',    icon:'🏖️',target:600, color:'#8b5cf6',milestone:false,resettable:true, isa:true,phases:['s1'],targetDate:''},
+  {key:'obelisk',   label:'Obelisk',           icon:'🔷',target:2000,color:'#0ea5e9',milestone:false,resettable:false,isa:true,phases:[],targetDate:''},
+  {key:'deposit',   label:'Deposit',           icon:'🏠',target:1800,color:'#f5a623',milestone:true, resettable:false,isa:true,phases:['pre-ilp','ilp-premove','ilp-1-6','ilp-7plus'],targetDate:''},
+  {key:'holiday',   label:'Holiday Fund',      icon:'🏖️',target:1200,color:'#8b5cf6',milestone:false,resettable:true, isa:true,phases:['pre-ilp','ilp-premove','ilp-1-6','ilp-7plus'],targetDate:''},
+  {key:'dj',        label:'DJ Controller',     icon:'🎛️',target:1000,color:'#ec4899',milestone:false,resettable:false,isa:true,phases:['pre-ilp','ilp-premove','ilp-1-6','ilp-7plus'],targetDate:''},
 ];
 
-const PHASES=[
-  {key:'s1',          label:'S1 — Current Path',    desc:'Shared household · Partner contributes £1,200 · California goal active'},
-  {key:'pre-ilp',     label:'Pre-ILP (Transition)', desc:'Decision made · Same household · Deposit sprint begins'},
-  {key:'ilp-premove', label:'ILP — Pre Move',       desc:'Saving deposit · Experiences + half shopping redirected'},
-  {key:'ilp-1-6',     label:'ILP — Months 1–6',    desc:'Moved out · Two households · Full old flat bills excl. Hyperoptic'},
-  {key:'ilp-7plus',   label:'ILP — Month 7+',      desc:'Old flat ~£500/mo · Surplus returning · Level up incoming'},
+// Phases — user-defined life-stage "scenarios". Each carries its own budget
+// overrides (applied on top of the global category limits when active).
+const DEFAULT_PHASES=[
+  {key:'s1',          label:'S1 — Current Path',    desc:'Shared household · Partner contributes £1,200 · California goal active',
+   budgets:{bills:2309,groceries:600,coffee:60,dog:125,travel:200,shopping:200,experiences:300,subscriptions:154.36}},
+  {key:'pre-ilp',     label:'Pre-ILP (Transition)', desc:'Decision made · Same household · Deposit sprint begins',
+   budgets:{bills:2309,groceries:600,coffee:60,dog:125,travel:200,shopping:200,experiences:300,subscriptions:154.36}},
+  {key:'ilp-premove', label:'ILP — Pre Move',       desc:'Saving deposit · Experiences + half shopping redirected',
+   budgets:{bills:2309,groceries:600,coffee:60,dog:125,travel:200,shopping:100,experiences:0,subscriptions:124.37}},
+  {key:'ilp-1-6',     label:'ILP — Months 1–6',    desc:'Moved out · Two households · Full old flat bills excl. Hyperoptic',
+   budgets:{bills:1647,groceries:400,coffee:60,dog:125,travel:200,shopping:200,experiences:300,subscriptions:124.37}},
+  {key:'ilp-7plus',   label:'ILP — Month 7+',      desc:'Old flat ~£500/mo · Surplus returning · Level up incoming',
+   budgets:{bills:1324,groceries:400,coffee:60,dog:125,travel:200,shopping:200,experiences:300,subscriptions:124.37}},
 ];
+let phasesList=[];
 
 const DEFAULT_RECURRING=[
   {id:'rent',     name:'Rent',                 amount:800,  day:1, freq:'monthly', startDate:'', cat:'bills',         type:'expense'},
@@ -1005,14 +1006,25 @@ let activePotKey=null;
 let currentType='expense', selectedCat=null, selectedSource=null;
 let calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
 let calTxCache=[], editingRowIndex=null, editingTx=null, daySheetDate=null;
-let editingRecurringId=null, editingBudgetKey=null;
+let editingRecurringId=null, editingCatKey=null, editingPhaseKey=null;
 
 // ─── HELPERS ──────────────────────────────────────────────
 
-function currentPhaseGroup(){return currentPhase==='s1'?'s1':'ilp';}
-function getActivePots(){const g=currentPhaseGroup();return potsList.filter(p=>!p.phaseGroup||p.phaseGroup==='all'||p.phaseGroup===g);}
+// Old pots used a 2-way phaseGroup ('all'/'s1'/'ilp'); now phases are open-ended
+// scenarios, so pots carry an explicit list of phase keys they're active in.
+function migratePots(list){
+  return (list||[]).map(p=>{
+    if(p.phases===undefined && p.phaseGroup!==undefined){
+      p.phases = p.phaseGroup==='all' ? [] : (p.phaseGroup==='s1' ? ['s1'] : ['pre-ilp','ilp-premove','ilp-1-6','ilp-7plus']);
+      delete p.phaseGroup;
+    }
+    if(p.phases===undefined)p.phases=[];
+    return p;
+  });
+}
+function getActivePots(){return potsList.filter(p=>!p.phases||p.phases.length===0||p.phases.includes(currentPhase));}
 function getActiveISA(){return getActivePots().filter(p=>p.isa).map(p=>p.key);}
-function getTracked(){return['bills','groceries','coffee','dog','travel','shopping','experiences','subscriptions'];}
+function getTracked(){return Object.keys(BUDGET).filter(k=>BUDGET[k].limit!==null&&BUDGET[k].limit!==undefined);}
 function fmt(n){return'£'+Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
 function todayStr(){return new Date().toISOString().split('T')[0];}
 function daysUntilPayday(){
@@ -1034,7 +1046,9 @@ function inCurrentMonth(ds){
   return d>=s&&d<e;
 }
 function applyPhaseBudget(){
-  const pb=PHASE_BUDGETS[currentPhase]||PHASE_BUDGETS['ilp-7plus'];
+  const phase=phasesList.find(p=>p.key===currentPhase)||phasesList[0];
+  if(!phase)return;
+  const pb=phase.budgets||{};
   Object.entries(pb).forEach(([k,v])=>{if(BUDGET[k])BUDGET[k].limit=customBudget[k]!==undefined?customBudget[k]:v;});
 }
 
@@ -1192,8 +1206,12 @@ function loadAll(){
   recurringList=r?JSON.parse(r):JSON.parse(JSON.stringify(DEFAULT_RECURRING));
   const b=localStorage.getItem('fwsBudget');
   customBudget=b?JSON.parse(b):{};
+  const cat=localStorage.getItem('fwsCategories');
+  BUDGET=cat?JSON.parse(cat):JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+  const ph=localStorage.getItem('fwsPhasesList');
+  phasesList=ph?JSON.parse(ph):JSON.parse(JSON.stringify(DEFAULT_PHASES));
   const pl=localStorage.getItem('fwsPotsList');
-  potsList=pl?JSON.parse(pl):JSON.parse(JSON.stringify(DEFAULT_POTS));
+  potsList=migratePots(pl?JSON.parse(pl):JSON.parse(JSON.stringify(DEFAULT_POTS)));
   const p=localStorage.getItem('fwsPotBalances');
   potBalances=p?JSON.parse(p):{};
   drivingTotal=parseFloat(localStorage.getItem('fwsDriving')||'0');
@@ -1205,6 +1223,8 @@ function saveAll(){
   localStorage.setItem('fwsPhase',currentPhase);
   localStorage.setItem('fwsRecurring',JSON.stringify(recurringList));
   localStorage.setItem('fwsBudget',JSON.stringify(customBudget));
+  localStorage.setItem('fwsCategories',JSON.stringify(BUDGET));
+  localStorage.setItem('fwsPhasesList',JSON.stringify(phasesList));
   localStorage.setItem('fwsPotsList',JSON.stringify(potsList));
   localStorage.setItem('fwsPotBalances',JSON.stringify(potBalances));
   localStorage.setItem('fwsDriving',drivingTotal.toString());
@@ -1215,6 +1235,8 @@ function saveAll(){
     recurring: JSON.stringify(recurringList),
     budget: JSON.stringify(customBudget),
     potsList: JSON.stringify(potsList),
+    categories: JSON.stringify(BUDGET),
+    phasesList: JSON.stringify(phasesList),
   });
 }
 
@@ -1255,10 +1277,22 @@ async function syncFromSheet(){
         localStorage.setItem('fwsBudget',sheetSettings.budget);
       }catch(e){}
     }
+    if(sheetSettings.categories){
+      try{
+        BUDGET=JSON.parse(sheetSettings.categories);
+        localStorage.setItem('fwsCategories',sheetSettings.categories);
+      }catch(e){}
+    }
+    if(sheetSettings.phasesList){
+      try{
+        phasesList=JSON.parse(sheetSettings.phasesList);
+        localStorage.setItem('fwsPhasesList',sheetSettings.phasesList);
+      }catch(e){}
+    }
     if(sheetSettings.potsList){
       try{
-        potsList=JSON.parse(sheetSettings.potsList);
-        localStorage.setItem('fwsPotsList',sheetSettings.potsList);
+        potsList=migratePots(JSON.parse(sheetSettings.potsList));
+        localStorage.setItem('fwsPotsList',JSON.stringify(potsList));
         potsList.forEach(pot=>{if(potBalances[pot.key]===undefined)potBalances[pot.key]=0;});
       }catch(e){}
     }
@@ -1496,6 +1530,18 @@ function setProjDirection(dir){
   document.getElementById('proj-toggle-income').classList.toggle('active',dir==='income');
   document.getElementById('field-category').style.display=dir==='income'?'none':'';
   document.getElementById('field-source').style.display=dir==='income'?'':'none';
+}
+// Categories are user-editable, so the pickers are rendered from BUDGET
+// rather than hardcoded — call after any category add/edit/delete.
+function renderCategoryPickers(){
+  const btns=(onclickFn)=>Object.entries(BUDGET).map(([key,b])=>
+    `<button class="cat-btn" data-cat="${key}" onclick="${onclickFn}(this)"><span class="cat-icon">${b.icon}</span>${b.label}</button>`
+  ).join('');
+  document.getElementById('log-cat-grid').innerHTML=btns('selectCat');
+  document.getElementById('edit-cat-grid').innerHTML=btns('editSelectCat');
+  document.getElementById('rec-cat').innerHTML=Object.entries(BUDGET).map(([key,b])=>
+    `<option value="${key}">${b.icon} ${b.label}</option>`
+  ).join('');
 }
 function selectCat(el){document.querySelectorAll('#field-category .cat-btn').forEach(b=>b.classList.remove('selected'));el.classList.add('selected');selectedCat=el.dataset.cat;}
 function selectSource(el){document.querySelectorAll('.source-btn').forEach(b=>b.classList.remove('selected'));el.classList.add('selected');selectedSource=el.dataset.source;}
@@ -1869,6 +1915,21 @@ function resetPot(){
   potBalances[activePotKey]=0;saveAll();showToast('Pot reset ✓','success');
   closeSheet('pot-overlay');renderSavings();
 }
+function renderGoalPhaseFields(selectedPhases){
+  const allPhases=!selectedPhases||selectedPhases.length===0;
+  document.getElementById('goal-phase-all').checked=allPhases;
+  document.getElementById('goal-phase-fields').innerHTML=phasesList.map(p=>
+    `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;text-transform:none;letter-spacing:normal;font-size:.82rem;color:var(--text);">
+      <input type="checkbox" class="goal-phase-cb" value="${p.key}" ${selectedPhases&&selectedPhases.includes(p.key)?'checked':''} style="width:16px;height:16px;"/> ${p.label}
+    </label>`
+  ).join('');
+  document.getElementById('goal-phase-fields').style.display=allPhases?'none':'flex';
+}
+function toggleGoalPhaseAll(){
+  const all=document.getElementById('goal-phase-all').checked;
+  document.getElementById('goal-phase-fields').style.display=all?'none':'flex';
+  if(all)document.querySelectorAll('.goal-phase-cb').forEach(cb=>cb.checked=false);
+}
 function openAddGoal(){
   activePotKey=null;
   document.getElementById('goal-edit-title').textContent='Add savings goal';
@@ -1877,7 +1938,7 @@ function openAddGoal(){
   document.getElementById('goal-target').value='';
   document.getElementById('goal-date').value='';
   document.getElementById('goal-color').value='#4a9eff';
-  document.getElementById('goal-phase').value='all';
+  renderGoalPhaseFields([]);
   document.getElementById('goal-milestone').checked=false;
   document.getElementById('goal-resettable').checked=false;
   document.getElementById('goal-isa').checked=true;
@@ -1894,7 +1955,7 @@ function openEditGoal(key){
   document.getElementById('goal-target').value=p.target;
   document.getElementById('goal-date').value=p.targetDate||'';
   document.getElementById('goal-color').value=p.color||'#4a9eff';
-  document.getElementById('goal-phase').value=p.phaseGroup||'all';
+  renderGoalPhaseFields(p.phases||[]);
   document.getElementById('goal-milestone').checked=!!p.milestone;
   document.getElementById('goal-resettable').checked=!!p.resettable;
   document.getElementById('goal-isa').checked=p.isa!==false;
@@ -1909,7 +1970,8 @@ function saveGoal(){
   const target=parseFloat(document.getElementById('goal-target').value);
   const targetDate=document.getElementById('goal-date').value;
   const color=document.getElementById('goal-color').value;
-  const phaseGroup=document.getElementById('goal-phase').value;
+  const allPhases=document.getElementById('goal-phase-all').checked;
+  const phases=allPhases?[]:Array.from(document.querySelectorAll('.goal-phase-cb:checked')).map(cb=>cb.value);
   const milestone=document.getElementById('goal-milestone').checked;
   const resettable=document.getElementById('goal-resettable').checked;
   const isa=document.getElementById('goal-isa').checked;
@@ -1919,10 +1981,10 @@ function saveGoal(){
 
   if(activePotKey){
     const p=potsList.find(x=>x.key===activePotKey);
-    if(p)Object.assign(p,{label,icon,target,targetDate,color,phaseGroup,milestone,resettable,isa});
+    if(p)Object.assign(p,{label,icon,target,targetDate,color,phases,milestone,resettable,isa});
   }else{
     const key=`pot_${Date.now()}`;
-    potsList.push({key,label,icon,target,targetDate,color,phaseGroup,milestone,resettable,isa});
+    potsList.push({key,label,icon,target,targetDate,color,phases,milestone,resettable,isa});
     potBalances[key]=0;
   }
   saveAll();closeSheet('goal-edit-overlay');renderSavings();
@@ -2020,19 +2082,18 @@ function confirmAllocation(){
 // ─── SETTINGS ─────────────────────────────────────────────
 
 function renderSettings(){
-  const phase=PHASES.find(p=>p.key===currentPhase)||PHASES[0];
+  const phase=phasesList.find(p=>p.key===currentPhase)||phasesList[0];
   document.getElementById('settings-phase-badge').textContent=phase.label;
   document.getElementById('settings-phase-sub').textContent=phase.desc;
   updateThemeButtons(currentTheme);
-  document.getElementById('budget-settings-list').innerHTML=getTracked().map(key=>{
-    const b=BUDGET[key];if(!b)return'';
+  document.getElementById('budget-settings-list').innerHTML=Object.entries(BUDGET).map(([key,b])=>{
     const limit=customBudget[key]!==undefined?customBudget[key]:b.limit;
-    return`<div class="settings-row" onclick="openBudgetEdit('${key}')">
+    return`<div class="settings-row" onclick="openCategoryEdit('${key}')">
       <div class="settings-row-left"><div class="settings-row-icon">${b.icon}</div>
-      <div><div class="settings-row-label">${b.label}</div><div class="settings-row-sub">Monthly limit</div></div></div>
-      <div class="settings-row-right">${limit!==null?fmt(limit):'No limit'}<span class="settings-chevron">›</span></div>
+      <div><div class="settings-row-label">${b.label}</div><div class="settings-row-sub">${b.locked?'Built-in':'Monthly limit'}</div></div></div>
+      <div class="settings-row-right">${limit!==null&&limit!==undefined?fmt(limit):'No limit'}<span class="settings-chevron">›</span></div>
     </div>`;
-  }).filter(Boolean).join('');
+  }).join('');
 
   // Budget total
   const budgetTotal = getTracked().reduce((s,key) => {
@@ -2098,11 +2159,16 @@ function renderSettings(){
 }
 function openPhaseSheet(){
   selectedPhase=currentPhase;
-  document.getElementById('phase-options').innerHTML=PHASES.map(p=>`
+  document.getElementById('phase-options').innerHTML=phasesList.map(p=>`
     <div class="phase-option${p.key===selectedPhase?' selected':''}" onclick="selectPhase('${p.key}',this)">
-      <div class="phase-option-label">${p.label}</div>
-      <div class="phase-option-desc">${p.desc}</div>
-    </div>`).join('');
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div style="flex:1;min-width:0;">
+          <div class="phase-option-label">${p.label}</div>
+          <div class="phase-option-desc">${p.desc}</div>
+        </div>
+        <button onclick="event.stopPropagation();openEditPhase('${p.key}')" style="background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;padding:2px 4px;flex-shrink:0;">✎</button>
+      </div>
+    </div>`).join('') + `<button onclick="openAddPhase()" style="width:100%;background:var(--surface2);border:1px dashed var(--border);border-radius:var(--radius-sm);color:var(--muted);padding:12px;font-size:.78rem;cursor:pointer;font-family:var(--font-mono);letter-spacing:.08em;text-transform:uppercase;margin-top:4px;">+ Add phase</button>`;
   openSheet('phase-overlay');
 }
 function selectPhase(key,el){
@@ -2114,18 +2180,128 @@ function savePhase(){
   currentPhase=selectedPhase;applyPhaseBudget();saveAll();
   closeSheet('phase-overlay');renderSettings();showToast('Phase updated ✓','success');
 }
-function openBudgetEdit(key){
-  editingBudgetKey=key;
-  const b=BUDGET[key];
-  document.getElementById('budget-edit-title').textContent=`Edit — ${b.label}`;
-  document.getElementById('budget-edit-input').value=customBudget[key]!==undefined?customBudget[key]:b.limit;
+function openAddCategory(){
+  editingCatKey=null;
+  document.getElementById('cat-edit-title').textContent='Add category';
+  document.getElementById('cat-edit-icon').value='💷';
+  document.getElementById('cat-edit-label').value='';
+  document.getElementById('cat-edit-limit').value='';
+  document.getElementById('cat-delete-btn').style.display='none';
+  document.getElementById('cat-save-btn').style.gridColumn='1/-1';
   openSheet('budget-edit-overlay');
 }
-function saveBudgetEdit(){
-  const val=parseFloat(document.getElementById('budget-edit-input').value);
-  if(isNaN(val)||val<0){showToast('Enter a valid amount','error');return;}
-  customBudget[editingBudgetKey]=val;BUDGET[editingBudgetKey].limit=val;
-  saveAll();closeSheet('budget-edit-overlay');renderSettings();showToast('Updated ✓','success');
+function openCategoryEdit(key){
+  editingCatKey=key;
+  const b=BUDGET[key];if(!b)return;
+  const limit=customBudget[key]!==undefined?customBudget[key]:b.limit;
+  document.getElementById('cat-edit-title').textContent=`Edit — ${b.label}`;
+  document.getElementById('cat-edit-icon').value=b.icon;
+  document.getElementById('cat-edit-label').value=b.label;
+  document.getElementById('cat-edit-limit').value=(limit===null||limit===undefined)?'':limit;
+  document.getElementById('cat-delete-btn').style.display=b.locked?'none':'block';
+  document.getElementById('cat-save-btn').style.gridColumn=b.locked?'1/-1':'2/3';
+  openSheet('budget-edit-overlay');
+}
+function saveCategoryEdit(){
+  const icon=document.getElementById('cat-edit-icon').value.trim()||'💷';
+  const label=document.getElementById('cat-edit-label').value.trim();
+  const limitRaw=document.getElementById('cat-edit-limit').value;
+  const limit=limitRaw===''?null:parseFloat(limitRaw);
+
+  if(!label){showToast('Enter a name','error');return;}
+  if(limit!==null&&(isNaN(limit)||limit<0)){showToast('Enter a valid limit or leave blank','error');return;}
+
+  if(editingCatKey){
+    Object.assign(BUDGET[editingCatKey],{icon,label,limit});
+    if(limit!==null)customBudget[editingCatKey]=limit;else delete customBudget[editingCatKey];
+  }else{
+    const key=`cat_${Date.now()}`;
+    BUDGET[key]={icon,label,limit};
+    if(limit!==null)customBudget[key]=limit;
+  }
+  saveAll();renderCategoryPickers();closeSheet('budget-edit-overlay');renderSettings();
+  showToast(editingCatKey?'Category updated ✓':'Category added ✓','success');
+}
+function deleteCategory(){
+  if(!editingCatKey)return;
+  const b=BUDGET[editingCatKey];
+  if(b&&b.locked){showToast("Built-in category — can't be deleted",'error');return;}
+  if(!confirm('Delete this category? Past transactions keep their category name but it will no longer be selectable.'))return;
+  delete BUDGET[editingCatKey];
+  delete customBudget[editingCatKey];
+  phasesList.forEach(p=>{if(p.budgets)delete p.budgets[editingCatKey];});
+  saveAll();renderCategoryPickers();closeSheet('budget-edit-overlay');renderSettings();showToast('Category deleted','success');
+}
+function openAddPhase(){
+  editingPhaseKey=null;
+  document.getElementById('phase-edit-title').textContent='Add phase';
+  document.getElementById('phase-name').value='';
+  document.getElementById('phase-desc').value='';
+  renderPhaseBudgetFields({});
+  document.getElementById('phase-delete-btn').style.display='none';
+  document.getElementById('phase-save-btn').style.gridColumn='1/-1';
+  closeSheet('phase-overlay');
+  openSheet('phase-edit-overlay');
+}
+function openEditPhase(key){
+  editingPhaseKey=key;
+  const p=phasesList.find(x=>x.key===key);if(!p)return;
+  document.getElementById('phase-edit-title').textContent='Edit phase';
+  document.getElementById('phase-name').value=p.label;
+  document.getElementById('phase-desc').value=p.desc||'';
+  renderPhaseBudgetFields(p.budgets||{});
+  document.getElementById('phase-delete-btn').style.display='block';
+  document.getElementById('phase-save-btn').style.gridColumn='2/3';
+  closeSheet('phase-overlay');
+  openSheet('phase-edit-overlay');
+}
+function renderPhaseBudgetFields(existing){
+  document.getElementById('phase-budget-fields').innerHTML=getTracked().map(key=>{
+    const b=BUDGET[key];
+    const val=existing[key]!==undefined?existing[key]:'';
+    return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <div style="width:120px;font-size:.75rem;color:var(--muted);flex-shrink:0;">${b.icon} ${b.label}</div>
+      <input type="number" step="0.01" min="0" placeholder="no override" data-cat="${key}" class="phase-budget-input" value="${val}"
+        style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px;font-size:.85rem;outline:none;font-family:var(--font-mono);"/>
+    </div>`;
+  }).join('');
+}
+function savePhaseDefinition(){
+  const label=document.getElementById('phase-name').value.trim();
+  const desc=document.getElementById('phase-desc').value.trim();
+  if(!label){showToast('Enter a name','error');return;}
+
+  const budgets={};
+  document.querySelectorAll('.phase-budget-input').forEach(inp=>{
+    if(inp.value==='')return;
+    const v=parseFloat(inp.value);
+    if(!isNaN(v))budgets[inp.dataset.cat]=v;
+  });
+
+  if(editingPhaseKey){
+    const p=phasesList.find(x=>x.key===editingPhaseKey);
+    if(p)Object.assign(p,{label,desc,budgets});
+  }else{
+    const key=`phase_${Date.now()}`;
+    phasesList.push({key,label,desc,budgets});
+  }
+  applyPhaseBudget();saveAll();
+  closeSheet('phase-edit-overlay');renderSettings();
+  showToast(editingPhaseKey?'Phase updated ✓':'Phase added ✓','success');
+}
+function deletePhaseDefinition(){
+  if(!editingPhaseKey)return;
+  if(phasesList.length<=1){showToast('Keep at least one phase','error');return;}
+  if(!confirm('Delete this phase?'))return;
+  phasesList=phasesList.filter(p=>p.key!==editingPhaseKey);
+  potsList.forEach(p=>{if(p.phases)p.phases=p.phases.filter(k=>k!==editingPhaseKey);});
+  if(currentPhase===editingPhaseKey){
+    currentPhase=phasesList[0].key;
+    selectedPhase=currentPhase;
+    applyPhaseBudget();
+  }
+  saveAll();
+  closeSheet('phase-edit-overlay');renderSettings();showToast('Phase deleted','success');
 }
 let recType='expense', recSource='salary', recMatchMode='single';
 
@@ -2246,7 +2422,6 @@ function deleteRecurring(){
 
 // ─── MONZO QUEUE ──────────────────────────────────────────
 
-const FWS_CATS    = ['bills','groceries','coffee','dog','travel','shopping','experiences','subscriptions','driving','other'];
 const INC_SOURCES = ['salary','overtime','freelance','other'];
 let monzoQueue = [];
 let projectedTxCache = []; // one-off projected transactions from sheet
@@ -2342,7 +2517,7 @@ function renderMonzoQueue() {
         </select>`
       : `<select onchange="updateQueueCat(${idx},this.value)"
           style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:8px;font-family:var(--font-mono);font-size:.72rem;outline:none;-webkit-appearance:none;margin-bottom:6px;">
-          ${FWS_CATS.map(c=>{const b=BUDGET[c]||{icon:'💷',label:c};return`<option value="${c}" ${c===item.fwsCat?'selected':''}>${b.icon} ${b.label}</option>`;}).join('')}
+          ${Object.keys(BUDGET).map(c=>{const b=BUDGET[c]||{icon:'💷',label:c};return`<option value="${c}" ${c===item.fwsCat?'selected':''}>${b.icon} ${b.label}</option>`;}).join('')}
         </select>`;
 
     return `
@@ -2705,6 +2880,7 @@ function updateThemeButtons(name) {
 async function init(){
   loadAll();
   applyPhaseBudget();
+  renderCategoryPickers();
   let savedTheme=localStorage.getItem('fwsTheme')||'cyber';
   if(savedTheme==='matrix')savedTheme='terminal'; // old name, migrate silently
   currentTheme=savedTheme;
@@ -2713,7 +2889,7 @@ async function init(){
   await initSheet();
   // Sync pots and settings from Sheet (source of truth)
   const synced=await syncFromSheet();
-  if(synced) applyPhaseBudget();
+  if(synced){applyPhaseBudget();renderCategoryPickers();}
   // Check Monzo import queue
   checkMonzoQueue();
   renderDashboard();

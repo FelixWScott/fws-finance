@@ -2567,8 +2567,8 @@ function renderMonzoQueue() {
     const amtColour = isIncome ? 'var(--green)' : 'var(--accent)';
     const amtSign   = isIncome ? '+' : '-';
 
-    // Auto-detect matching recurring by name
-    const nameLower = item.name.toLowerCase();
+    // Auto-detect matching recurring by name (Monzo can send a blank/missing name, e.g. some transfers)
+    const nameLower = (item.name||'').toLowerCase();
     const matchedRec = recurringList.find(r =>
       nameLower.includes(r.name.toLowerCase()) || r.name.toLowerCase().includes(nameLower)
     );
@@ -2616,7 +2616,7 @@ function renderMonzoQueue() {
     <div style="background:var(--surface2);border:1px solid var(--border);border-left:2px solid ${amtColour};border-radius:var(--radius);padding:12px;" id="monzo-item-${idx}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
         <div style="flex:1;">
-          <div style="font-family:var(--font-main);font-size:.88rem;font-weight:700;letter-spacing:.04em;">${item.name}</div>
+          <div style="font-family:var(--font-main);font-size:.88rem;font-weight:700;letter-spacing:.04em;">${item.name||'(no description)'}</div>
           <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--muted);margin-top:2px;">${item.date} · ${item.monzoCat}</div>
           ${item.note?`<div style="font-family:var(--font-mono);font-size:.6rem;color:var(--muted);margin-top:1px;">${item.note}</div>`:''}
           ${projMatchHtml}

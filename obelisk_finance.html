@@ -306,6 +306,21 @@ body{
 .phase-option-label{font-size:.85rem;font-weight:700;margin-bottom:3px;}
 .phase-option-desc{font-size:.72rem;color:var(--muted);}
 
+/* APP LOCK */
+#lock-screen{position:fixed;inset:0;background:var(--bg);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:24px;text-align:center;}
+#lock-screen.open{display:flex;}
+.lock-title{font-family:var(--font-mono);font-size:.7rem;color:var(--accent);letter-spacing:.2em;text-transform:uppercase;}
+.pin-dots{display:flex;gap:14px;}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:1px solid var(--border);background:transparent;transition:all .15s;}
+.pin-dot.filled{background:var(--accent);border-color:var(--accent);box-shadow:0 0 8px rgba(232,0,42,0.5);}
+.pin-dots.shake{animation:pinshake .4s;}
+@keyframes pinshake{10%,90%{transform:translateX(-2px);}20%,80%{transform:translateX(4px);}30%,50%,70%{transform:translateX(-8px);}40%,60%{transform:translateX(8px);}}
+.pin-error{font-size:.72rem;color:var(--red);min-height:1em;}
+.pin-keypad{display:grid;grid-template-columns:repeat(3,64px);gap:18px;}
+.pin-keypad button{width:64px;height:64px;border-radius:50%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:1.4rem;font-family:var(--font-mono);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.pin-keypad button:active{background:var(--surface2);}
+.lock-forgot{font-size:.75rem;color:var(--muted);text-decoration:underline;cursor:pointer;background:none;border:none;font-family:inherit;}
+
 /* UTILS */
 .loading{display:flex;align-items:center;justify-content:center;padding:40px;color:var(--muted);font-size:.82rem;}
 .empty-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:.82rem;}
@@ -553,6 +568,8 @@ body{
       </div>
     </div>
   </div>
+  <div class="section-label">Security</div>
+  <div class="settings-section" id="security-settings-list"></div>
   <div class="section-label">Data</div>
   <div class="settings-section">
     <div class="settings-row" onclick="exportData()">
@@ -916,6 +933,44 @@ body{
         <div style="font-size:.62rem;color:var(--muted);margin-top:2px;font-family:var(--font-mono);">Removes this + all future, keeps history</div>
       </button>
       <button onclick="closeSheet('manage-rec-overlay')" class="full-btn btn-ghost" style="width:100%;padding:10px;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP LOCK SCREEN -->
+<div id="lock-screen">
+  <div class="lock-title">// FWS.FINANCE — LOCKED</div>
+  <div id="lock-dots" class="pin-dots">
+    <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+  </div>
+  <div id="lock-error" class="pin-error"></div>
+  <div class="pin-keypad">
+    <button onclick="pinKeyPress('1')">1</button><button onclick="pinKeyPress('2')">2</button><button onclick="pinKeyPress('3')">3</button>
+    <button onclick="pinKeyPress('4')">4</button><button onclick="pinKeyPress('5')">5</button><button onclick="pinKeyPress('6')">6</button>
+    <button onclick="pinKeyPress('7')">7</button><button onclick="pinKeyPress('8')">8</button><button onclick="pinKeyPress('9')">9</button>
+    <div></div><button onclick="pinKeyPress('0')">0</button><button onclick="pinBackspace()">⌫</button>
+  </div>
+  <button class="lock-forgot" onclick="forgotPin()">Forgot PIN?</button>
+</div>
+
+<!-- PIN SETUP/CHANGE/REMOVE SHEET -->
+<div class="sheet-overlay" id="pin-sheet-overlay" onclick="closeSheet('pin-sheet-overlay',event)">
+  <div class="bottom-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title" id="pin-sheet-title" style="margin-bottom:0;">Set a PIN</div>
+      <button class="sheet-close" onclick="closeSheet('pin-sheet-overlay')">✕</button>
+    </div>
+    <div class="sheet-body" style="display:flex;flex-direction:column;align-items:center;gap:20px;">
+      <div id="pin-sheet-dots" class="pin-dots">
+        <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+      </div>
+      <div class="pin-keypad">
+        <button onclick="pinKeyPress('1')">1</button><button onclick="pinKeyPress('2')">2</button><button onclick="pinKeyPress('3')">3</button>
+        <button onclick="pinKeyPress('4')">4</button><button onclick="pinKeyPress('5')">5</button><button onclick="pinKeyPress('6')">6</button>
+        <button onclick="pinKeyPress('7')">7</button><button onclick="pinKeyPress('8')">8</button><button onclick="pinKeyPress('9')">9</button>
+        <div></div><button onclick="pinKeyPress('0')">0</button><button onclick="pinBackspace()">⌫</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2158,6 +2213,150 @@ function confirmAllocation(){
   renderSavings();
 }
 
+// ─── APP LOCK (PIN) ───────────────────────────────────────
+// Client-side only — this deters casual snooping on an unlocked/lost phone,
+// it isn't real security against someone willing to dig through localStorage
+// or use the "Forgot PIN" escape hatch. The PIN itself is never stored, only
+// a salted SHA-256 hash.
+const PIN_LENGTH=4;
+let pinEntryBuffer='';
+let pinEntryMode=null; // 'unlock' | 'create-1' | 'create-2' | 'verify-change' | 'verify-remove'
+let pinFirstEntry='';
+
+function hasPinSet(){return!!(localStorage.getItem('fwsPinHash')&&localStorage.getItem('fwsPinSalt'));}
+function randomHex(bytes){const arr=new Uint8Array(bytes);crypto.getRandomValues(arr);return Array.from(arr).map(b=>b.toString(16).padStart(2,'0')).join('');}
+async function hashPin(pin,salt){
+  const data=new TextEncoder().encode(salt+':'+pin);
+  const buf=await crypto.subtle.digest('SHA-256',data);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function showLockScreen(){
+  pinEntryMode='unlock';pinEntryBuffer='';
+  document.getElementById('lock-error').textContent='';
+  updatePinDots('lock-dots');
+  document.getElementById('lock-screen').classList.add('open');
+}
+function hideLockScreen(){document.getElementById('lock-screen').classList.remove('open');}
+
+function activeDotsId(){return pinEntryMode==='unlock'?'lock-dots':'pin-sheet-dots';}
+function updatePinDots(containerId){
+  const el=document.getElementById(containerId);if(!el)return;
+  el.querySelectorAll('.pin-dot').forEach((d,i)=>d.classList.toggle('filled',i<pinEntryBuffer.length));
+}
+function pinKeyPress(digit){
+  if(pinEntryBuffer.length>=PIN_LENGTH)return;
+  pinEntryBuffer+=digit;
+  updatePinDots(activeDotsId());
+  if(pinEntryBuffer.length===PIN_LENGTH)handlePinComplete();
+}
+function pinBackspace(){
+  pinEntryBuffer=pinEntryBuffer.slice(0,-1);
+  updatePinDots(activeDotsId());
+}
+
+async function handlePinComplete(){
+  const entered=pinEntryBuffer;
+  if(pinEntryMode==='unlock'){
+    const hash=await hashPin(entered,localStorage.getItem('fwsPinSalt'));
+    if(hash===localStorage.getItem('fwsPinHash')){
+      hideLockScreen();
+    }else{
+      document.getElementById('lock-error').textContent='Incorrect PIN';
+      pinEntryBuffer='';updatePinDots('lock-dots');
+      const dots=document.getElementById('lock-dots');
+      dots.classList.remove('shake');void dots.offsetWidth;dots.classList.add('shake');
+    }
+  }else if(pinEntryMode==='create-1'){
+    pinFirstEntry=entered;pinEntryMode='create-2';pinEntryBuffer='';
+    updatePinDots('pin-sheet-dots');
+    document.getElementById('pin-sheet-title').textContent='Confirm PIN';
+  }else if(pinEntryMode==='create-2'){
+    if(entered!==pinFirstEntry){
+      showToast("PINs didn't match — try again",'error');
+      pinEntryMode='create-1';pinFirstEntry='';pinEntryBuffer='';
+      updatePinDots('pin-sheet-dots');
+      document.getElementById('pin-sheet-title').textContent='Set a PIN';
+      return;
+    }
+    const salt=randomHex(16);
+    localStorage.setItem('fwsPinSalt',salt);
+    localStorage.setItem('fwsPinHash',await hashPin(entered,salt));
+    closeSheet('pin-sheet-overlay');renderSettings();
+    showToast('PIN set ✓','success');
+  }else if(pinEntryMode==='verify-change'){
+    const hash=await hashPin(entered,localStorage.getItem('fwsPinSalt'));
+    if(hash===localStorage.getItem('fwsPinHash')){
+      pinEntryMode='create-1';pinFirstEntry='';pinEntryBuffer='';
+      updatePinDots('pin-sheet-dots');
+      document.getElementById('pin-sheet-title').textContent='Set a new PIN';
+    }else{
+      showToast('Incorrect PIN','error');
+      pinEntryBuffer='';updatePinDots('pin-sheet-dots');
+    }
+  }else if(pinEntryMode==='verify-remove'){
+    const hash=await hashPin(entered,localStorage.getItem('fwsPinSalt'));
+    if(hash===localStorage.getItem('fwsPinHash')){
+      localStorage.removeItem('fwsPinSalt');
+      localStorage.removeItem('fwsPinHash');
+      closeSheet('pin-sheet-overlay');renderSettings();
+      showToast('App lock removed','success');
+    }else{
+      showToast('Incorrect PIN','error');
+      pinEntryBuffer='';updatePinDots('pin-sheet-dots');
+    }
+  }
+}
+
+function openPinSetup(){
+  pinEntryMode='create-1';pinFirstEntry='';pinEntryBuffer='';
+  document.getElementById('pin-sheet-title').textContent='Set a PIN';
+  updatePinDots('pin-sheet-dots');
+  openSheet('pin-sheet-overlay');
+}
+function openPinChange(){
+  pinEntryMode='verify-change';pinEntryBuffer='';
+  document.getElementById('pin-sheet-title').textContent='Enter current PIN';
+  updatePinDots('pin-sheet-dots');
+  openSheet('pin-sheet-overlay');
+}
+function openPinRemove(){
+  if(!confirm('Remove the app lock? Anyone with this device will be able to open the app without a PIN.'))return;
+  pinEntryMode='verify-remove';pinEntryBuffer='';
+  document.getElementById('pin-sheet-title').textContent='Enter current PIN to confirm';
+  updatePinDots('pin-sheet-dots');
+  openSheet('pin-sheet-overlay');
+}
+function forgotPin(){
+  if(!confirm('Reset the app lock? This only clears the PIN — your transactions and settings stay safe in Google Sheets. Anyone with this device will be able to open the app without a PIN until you set a new one.'))return;
+  localStorage.removeItem('fwsPinSalt');
+  localStorage.removeItem('fwsPinHash');
+  hideLockScreen();
+}
+function renderSecuritySettings(){
+  const el=document.getElementById('security-settings-list');if(!el)return;
+  if(hasPinSet()){
+    el.innerHTML=`
+      <div class="settings-row" onclick="openPinChange()">
+        <div class="settings-row-left"><div class="settings-row-icon">🔒</div>
+        <div><div class="settings-row-label">App lock</div><div class="settings-row-sub">PIN required to open the app</div></div></div>
+        <div class="settings-row-right">On<span class="settings-chevron">›</span></div>
+      </div>
+      <div class="settings-row" onclick="openPinRemove()">
+        <div class="settings-row-left"><div class="settings-row-icon">🔓</div>
+        <div><div class="settings-row-label">Remove app lock</div><div class="settings-row-sub">Requires current PIN</div></div></div>
+        <span class="settings-chevron">›</span>
+      </div>`;
+  }else{
+    el.innerHTML=`
+      <div class="settings-row" onclick="openPinSetup()">
+        <div class="settings-row-left"><div class="settings-row-icon">🔓</div>
+        <div><div class="settings-row-label">App lock</div><div class="settings-row-sub">Off — set a PIN to require it on open</div></div></div>
+        <div class="settings-row-right">Off<span class="settings-chevron">›</span></div>
+      </div>`;
+  }
+}
+
 // ─── SETTINGS ─────────────────────────────────────────────
 
 async function exportData(){
@@ -2266,6 +2465,7 @@ function renderSettings(){
   });
 
   document.getElementById('recurring-list').innerHTML=recurringList.length?groupsHtml:`<div class="empty-state" style="padding:20px;">No recurring payments</div>`;
+  renderSecuritySettings();
 }
 function openPhaseSheet(){
   selectedPhase=currentPhase;
@@ -2988,6 +3188,7 @@ function updateThemeButtons(name) {
 // ─── INIT ─────────────────────────────────────────────────
 
 async function init(){
+  if(hasPinSet())showLockScreen();
   loadPendingWrites();
   updateSyncBadge();
   loadAll();
@@ -3012,6 +3213,12 @@ init();
 // Retry queued writes when connectivity returns, and periodically while open
 window.addEventListener('online',flushPendingWrites);
 setInterval(flushPendingWrites,60000);
+
+// Re-lock whenever the app is backgrounded, so switching apps or locking the
+// phone (without the OS killing the page) doesn't leave it sitting unlocked.
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden'&&hasPinSet())showLockScreen();
+});
 
 // Register service worker for PWA install
 if('serviceWorker' in navigator){

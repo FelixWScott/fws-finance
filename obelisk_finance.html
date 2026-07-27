@@ -1193,6 +1193,34 @@ function matchesRecurring(txs, r, targetDate) {
   });
 }
 
+// How much of this occurrence's amount is still projected as "still due".
+// 'single' items are all-or-nothing (one matching transaction fulfils the
+// whole occurrence). 'budget' items (e.g. weekly TfL travel, groceries) are
+// meant to be covered incrementally by several smaller transactions, so this
+// sums actual same-category spend across the occurrence's period and
+// projects only the remaining shortfall — instead of staying at the full
+// amount until one transaction happens to land near the occurrence date,
+// then dropping to zero all at once.
+function projectedRemaining(txs, r, occurrenceDate) {
+  const matchMode = r.matchMode || 'single';
+  if (matchMode !== 'budget') {
+    const logged = txs.some(t => matchesRecurring([t], r, dateStr(occurrenceDate)));
+    return logged ? 0 : r.amount;
+  }
+  const rType = r.type || 'expense';
+  const fo = FREQ_OPTIONS.find(f => f.key === (r.freq || 'monthly'));
+  const periodDays = fo && fo.days ? fo.days : 30;
+  const startStr = dateStr(occurrenceDate);
+  const endStr = dateStr(new Date(occurrenceDate.getTime() + periodDays * 86400000));
+  const spent = txs.filter(t => {
+    if (t.type !== rType) return false;
+    const d = String(t.date).split('T')[0];
+    if (d < startStr || d >= endStr) return false;
+    return rType === 'income' ? t.source === r.source : t.category === r.cat;
+  }).reduce((s, t) => s + t.amount, 0);
+  return Math.max(0, r.amount - spent);
+}
+
 // ─── PERSISTENCE ──────────────────────────────────────────
 
 // ─── API ──────────────────────────────────────────────────
@@ -1478,15 +1506,14 @@ async function renderDashboard(){
   const wEndX=new Date(wEnd.getTime()-1);
   recurringList.forEach(r=>{
     getOccurrences(r,projFrom,wEndX).forEach(d2=>{
-      const ds=dateStr(d2);
-      const logged=txs.some(t=>matchesRecurring([t],r,ds));
-      if(!logged){
+      const remaining=projectedRemaining(txs,r,d2);
+      if(remaining>0){
         if((r.type||'expense')==='expense'){
-          projExp+=r.amount;
+          projExp+=remaining;
           const c=r.cat||'other';
-          projByCat[c]=(projByCat[c]||0)+r.amount;
+          projByCat[c]=(projByCat[c]||0)+remaining;
         }
-        else projInc+=r.amount;
+        else projInc+=remaining;
       }
     });
   });
@@ -1827,11 +1854,10 @@ async function renderCalendar(){
     const wEndX=new Date(wEnd.getTime()-1); // exclusive — the 25th belongs to next working month
     recurringList.forEach(r=>{
       getOccurrences(r,projFrom,wEndX).forEach(d2=>{
-        const ds=dateStr(d2);
-        const logged=calTxCache.some(t=>matchesRecurring([t],r,ds));
-        if(!logged){
-          if((r.type||'expense')==='expense')projExp+=r.amount;
-          else projInc+=r.amount;
+        const remaining=projectedRemaining(calTxCache,r,d2);
+        if(remaining>0){
+          if((r.type||'expense')==='expense')projExp+=remaining;
+          else projInc+=remaining;
         }
       });
     });

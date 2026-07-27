@@ -1121,33 +1121,71 @@ function applyPhaseBudget(){
 // ─── RECURRING ENGINE (projection only — no auto-logging) ─
 
 // Get all dates a recurring item is due between two dates
-function getOccurrences(r, from, to) {
+// includeActivePeriod: when true, an occurrence whose period has already
+// started (but not finished) as of 'from' is kept as the first result
+// instead of being skipped to the next one — used for "what's still due
+// right now" projections (Dashboard, working-month totals), where 'from' is
+// always "this exact moment" and an in-progress period should still count.
+// Calendar day-cell rendering passes a specific month's boundary as 'from'
+// and needs the strict, unchanged behavior (only occurrences >= from), so it
+// leaves this off by default.
+function getOccurrences(r, from, to, includeActivePeriod) {
   let dates = [];
   const freq = r.freq || 'monthly';
   const fo = FREQ_OPTIONS.find(f => f.key === freq);
+  const fromDay = new Date(from); fromDay.setHours(0,0,0,0);
   if (fo && fo.days) {
     if (!r.startDate) return dates;
     let d = new Date(r.startDate);
     d.setHours(0,0,0,0);
-    while (d < from) d = new Date(d.getTime() + fo.days * 86400000);
+    if (includeActivePeriod) {
+      // Fast-forward through fully-elapsed periods only — stop as soon as
+      // this period's end (d + periodDays) is still ahead of today, so a
+      // period that's currently in progress is kept rather than skipped.
+      while (d.getTime() + fo.days * 86400000 <= fromDay.getTime()) {
+        d = new Date(d.getTime() + fo.days * 86400000);
+      }
+    } else {
+      while (d < from) d = new Date(d.getTime() + fo.days * 86400000);
+    }
     while (d <= to) {
       dates.push(new Date(d));
       d = new Date(d.getTime() + fo.days * 86400000);
     }
   } else {
     const day = r.day || 1;
+    const stepFwd = date => {
+      const n = new Date(date);
+      if (freq === 'monthly') n.setMonth(n.getMonth() + 1);
+      else if (freq === 'quarterly') n.setMonth(n.getMonth() + 3);
+      else if (freq === 'annually') n.setFullYear(n.getFullYear() + 1);
+      return n;
+    };
+    const stepBack = date => {
+      const n = new Date(date);
+      if (freq === 'monthly') n.setMonth(n.getMonth() - 1);
+      else if (freq === 'quarterly') n.setMonth(n.getMonth() - 3);
+      else if (freq === 'annually') n.setFullYear(n.getFullYear() - 1);
+      return n;
+    };
     let d = new Date(from.getFullYear(), from.getMonth(), day);
-    if (d < from) {
-      if (freq === 'monthly') d.setMonth(d.getMonth() + 1);
-      else if (freq === 'quarterly') d.setMonth(d.getMonth() + 3);
-      else if (freq === 'annually') d.setFullYear(d.getFullYear() + 1);
+    if (includeActivePeriod) {
+      let guard = 0;
+      // This month's slot might be later than today (step back to the one
+      // whose period is currently active) or already superseded by a later
+      // slot (step forward past any fully-elapsed periods) — settle on
+      // whichever occurrence's period currently covers 'from', or the next.
+      while (d.getTime() > fromDay.getTime() && guard++ < 24) d = stepBack(d);
+      guard = 0;
+      while (stepFwd(d).getTime() <= fromDay.getTime() && guard++ < 24) d = stepFwd(d);
+    } else if (d < from) {
+      d = stepFwd(d);
     }
     while (d <= to) {
-      if (d >= from) dates.push(new Date(d));
-      if (freq === 'monthly') d = new Date(d.getFullYear(), d.getMonth() + 1, day);
-      else if (freq === 'quarterly') d = new Date(d.getFullYear(), d.getMonth() + 3, day);
-      else if (freq === 'annually') d = new Date(d.getFullYear() + 1, d.getMonth(), day);
-      else break;
+      if (includeActivePeriod || d >= from) dates.push(new Date(d));
+      const next = stepFwd(d);
+      if (next.getTime() === d.getTime()) break; // unrecognized freq — avoid an infinite loop
+      d = next;
     }
   }
   // Respect per-occurrence skips and an end date (exclusive)
@@ -1505,7 +1543,7 @@ async function renderDashboard(){
   // Upcoming recurring payments not yet logged (25th exclusive — payday belongs to next WM)
   const wEndX=new Date(wEnd.getTime()-1);
   recurringList.forEach(r=>{
-    getOccurrences(r,projFrom,wEndX).forEach(d2=>{
+    getOccurrences(r,projFrom,wEndX,true).forEach(d2=>{
       const remaining=projectedRemaining(txs,r,d2);
       if(remaining>0){
         if((r.type||'expense')==='expense'){
@@ -1853,7 +1891,7 @@ async function renderCalendar(){
     const projFromStr=dateStr(projFrom);
     const wEndX=new Date(wEnd.getTime()-1); // exclusive — the 25th belongs to next working month
     recurringList.forEach(r=>{
-      getOccurrences(r,projFrom,wEndX).forEach(d2=>{
+      getOccurrences(r,projFrom,wEndX,true).forEach(d2=>{
         const remaining=projectedRemaining(calTxCache,r,d2);
         if(remaining>0){
           if((r.type||'expense')==='expense')projExp+=remaining;

@@ -137,8 +137,8 @@ body{
 /* Tx item accent left border */
 .tx-item{border-radius:var(--radius);}
 /* Input fields sharp */
-.field input,.field select,.field textarea{border-radius:var(--radius);background:var(--surface2);}
-.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset,0 0 8px rgba(232,0,42,0.1);}
+.field input:not([type="checkbox"]):not([type="radio"]),.field select,.field textarea{border-radius:var(--radius);background:var(--surface2);}
+.field input:not([type="checkbox"]):not([type="radio"]):focus,.field select:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset,0 0 8px rgba(232,0,42,0.1);}
 /* Nav add label */
 .nav-add .nav-label{font-family:var(--font-mono);}
 
@@ -214,8 +214,9 @@ body{
 .toggle-btn.active{background:var(--accent);color:#fff;}
 .field{margin-bottom:16px;}
 .field label{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;margin-bottom:6px;}
-.field input,.field select,.field textarea{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:14px;font-size:1rem;font-family:inherit;-webkit-appearance:none;appearance:none;outline:none;}
-.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);}
+.field input:not([type="checkbox"]):not([type="radio"]),.field select,.field textarea{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:14px;font-size:1rem;font-family:inherit;-webkit-appearance:none;appearance:none;outline:none;}
+.field input:not([type="checkbox"]):not([type="radio"]):focus,.field select:focus,.field textarea:focus{border-color:var(--accent);}
+.field input[type="checkbox"],.field input[type="radio"]{width:16px;height:16px;flex-shrink:0;accent-color:var(--accent);}
 .field input.amount-input{font-size:2rem;font-weight:700;letter-spacing:-.04em;text-align:center;padding:20px;}
 .field textarea{resize:none;height:80px;font-size:.9rem;}
 .cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}

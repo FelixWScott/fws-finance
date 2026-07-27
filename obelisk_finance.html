@@ -1975,15 +1975,20 @@ function renderGoalPhaseFields(selectedPhases){
   document.getElementById('goal-phase-all').checked=allPhases;
   document.getElementById('goal-phase-fields').innerHTML=phasesList.map(p=>
     `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;text-transform:none;letter-spacing:normal;font-size:.82rem;color:var(--text);">
-      <input type="checkbox" class="goal-phase-cb" value="${p.key}" ${selectedPhases&&selectedPhases.includes(p.key)?'checked':''} style="width:16px;height:16px;"/> ${p.label}
+      <input type="checkbox" class="goal-phase-cb" value="${p.key}" onchange="syncGoalPhaseAll()" ${selectedPhases&&selectedPhases.includes(p.key)?'checked':''} style="width:16px;height:16px;"/> ${p.label}
     </label>`
   ).join('');
-  document.getElementById('goal-phase-fields').style.display=allPhases?'none':'flex';
 }
+// "All phases" and the specific-phase checkboxes are mutually exclusive —
+// checking one clears the other, always visible so there's no hidden step.
 function toggleGoalPhaseAll(){
-  const all=document.getElementById('goal-phase-all').checked;
-  document.getElementById('goal-phase-fields').style.display=all?'none':'flex';
-  if(all)document.querySelectorAll('.goal-phase-cb').forEach(cb=>cb.checked=false);
+  if(document.getElementById('goal-phase-all').checked){
+    document.querySelectorAll('.goal-phase-cb').forEach(cb=>cb.checked=false);
+  }
+}
+function syncGoalPhaseAll(){
+  const anyChecked=Array.from(document.querySelectorAll('.goal-phase-cb')).some(cb=>cb.checked);
+  document.getElementById('goal-phase-all').checked=!anyChecked;
 }
 function openAddGoal(){
   activePotKey=null;

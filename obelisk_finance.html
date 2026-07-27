@@ -1145,10 +1145,16 @@ function matchesRecurring(txs, r, targetDate) {
 // Reads: direct Sheets API (public sheet, no CORS issues)
 async function sheetsRead(range){
   const url=`${SHEETS_BASE}/values/${encodeURIComponent(range)}?key=${API_KEY}`;
-  const r=await fetch(url);
-  const json=await r.json();
-  if(!r.ok)throw new Error(`Sheets read ${r.status}`);
-  return(json.values||[]);
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),10000);
+  try{
+    const r=await fetch(url,{signal:controller.signal});
+    const json=await r.json();
+    if(!r.ok)throw new Error(`Sheets read ${r.status}`);
+    return(json.values||[]);
+  }finally{
+    clearTimeout(timeout);
+  }
 }
 
 // ─── WRITE QUEUE ──────────────────────────────────────────
@@ -1208,15 +1214,27 @@ async function initSheet(){
   catch(e){console.log('Init:',e.message);}
 }
 
+// Falls back to the last successfully loaded list on timeout/failure — showing
+// slightly stale data during a network hiccup beats showing an empty ledger,
+// which would misread as "no spending this month" rather than "can't reach it".
 async function loadTransactions(){
   try{
     const rows=await sheetsRead('transactions!A2:G');
-    return rows.map((r,i)=>({
+    const txs=rows.map((r,i)=>({
       date:r[0]||'',amount:parseFloat(r[1])||0,type:r[2]||'expense',
       category:r[3]||'other',source:r[4]||'',note:r[5]||'',recurring:r[6]||'',
       _rowIndex:i
     })).filter(t=>t.date);
-  }catch(e){console.error('Load error:',e);return[];}
+    localStorage.setItem('fwsTransactionsCache',JSON.stringify(txs));
+    return txs;
+  }catch(e){
+    console.error('Load error:',e);
+    try{
+      const cached=localStorage.getItem('fwsTransactionsCache');
+      if(cached)return JSON.parse(cached);
+    }catch(e2){}
+    return[];
+  }
 }
 
 async function appendTx(row){await scriptWrite({action:'append',row:row});}

@@ -677,10 +677,48 @@ body{
       <button class="sheet-close" onclick="closeSheet('pot-overlay')">✕</button>
     </div>
     <div class="sheet-body" style="display:flex;flex-direction:column;gap:10px;">
+      <div id="pot-sheet-pace" style="margin-bottom:2px;"></div>
       <div class="field" style="margin:0;"><label>Add funds</label><input type="number" id="pot-add-input" placeholder="£ amount" step="0.01" min="0" inputmode="decimal" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:14px;font-size:1.2rem;font-weight:700;width:100%;outline:none;"/></div>
       <button onclick="addToPot()" class="full-btn btn-accent">Add to pot</button>
       <button onclick="openWithdrawSheet()" class="full-btn btn-ghost">Withdraw from pot</button>
       <div id="pot-reset-wrap"></div>
+      <button onclick="openEditGoal(activePotKey)" class="full-btn btn-ghost">✎ Edit goal details</button>
+    </div>
+  </div>
+</div>
+
+<!-- GOAL EDIT SHEET -->
+<div class="sheet-overlay" id="goal-edit-overlay" onclick="closeSheet('goal-edit-overlay',event)">
+  <div class="bottom-sheet" style="max-height:90vh;">
+    <div class="sheet-handle"></div>
+    <div class="sheet-body">
+      <div class="sheet-title" id="goal-edit-title">Add savings goal</div>
+
+      <div class="two-col">
+        <div class="field"><label>Icon (emoji)</label><input type="text" id="goal-icon" placeholder="🎯" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:14px;font-size:1.3rem;width:100%;outline:none;text-align:center;"/></div>
+        <div class="field"><label>Colour</label><input type="color" id="goal-color" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);width:100%;height:52px;padding:4px;outline:none;"/></div>
+      </div>
+      <div class="field"><label>Name</label><input type="text" id="goal-name" placeholder="e.g. New laptop" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:14px;font-size:1rem;width:100%;outline:none;font-family:var(--font-main);"/></div>
+      <div class="field"><label>Target amount</label><input type="number" class="amount-input" id="goal-target" step="0.01" min="0" inputmode="decimal"/></div>
+      <div class="field"><label>Target date (optional)</label><input type="date" id="goal-date" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:14px;font-size:1rem;width:100%;outline:none;font-family:var(--font-mono);"/></div>
+      <div class="field">
+        <label>Show during</label>
+        <select id="goal-phase" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:14px;font-size:.9rem;width:100%;outline:none;-webkit-appearance:none;font-family:var(--font-mono);">
+          <option value="all">All phases</option>
+          <option value="s1">S1 phase only</option>
+          <option value="ilp">ILP phases only</option>
+        </select>
+      </div>
+      <div class="field" style="display:flex;flex-direction:column;gap:10px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;text-transform:none;letter-spacing:normal;font-size:.85rem;color:var(--text);"><input type="checkbox" id="goal-milestone" style="width:16px;height:16px;"/> Priority goal (highlighted)</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;text-transform:none;letter-spacing:normal;font-size:.85rem;color:var(--text);"><input type="checkbox" id="goal-resettable" style="width:16px;height:16px;"/> Resettable (e.g. reused after each trip)</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;text-transform:none;letter-spacing:normal;font-size:.85rem;color:var(--text);"><input type="checkbox" id="goal-isa" style="width:16px;height:16px;"/> Count towards ISA reconciliation total</label>
+      </div>
+
+      <div class="two-col" style="margin-top:8px;">
+        <button id="goal-delete-btn" onclick="deleteGoal()" class="full-btn btn-red" style="display:none;">Delete</button>
+        <button onclick="saveGoal()" id="goal-save-btn" class="full-btn btn-accent" style="grid-column:1/-1;">Save</button>
+      </div>
     </div>
   </div>
 </div>
@@ -908,24 +946,18 @@ const PHASE_BUDGETS={
   'ilp-7plus':  {bills:1324,groceries:400,coffee:60,dog:125,travel:200,shopping:200,experiences:300,subscriptions:124.37},
 };
 
-const PHASE_POTS={
-  's1':[
-    {key:'california',label:'California',       icon:'🌴',target:3000,color:'#22c98a',milestone:false,resettable:false},
-    {key:'buffer',    label:'Emergency Buffer', icon:'🛡️',target:3657,color:'#4a9eff',milestone:false,resettable:false},
-    {key:'holidays',  label:'Small Holidays',   icon:'🏖️',target:600, color:'#8b5cf6',milestone:false,resettable:true},
-    {key:'obelisk',   label:'Obelisk',          icon:'🔷',target:2000,color:'#0ea5e9',milestone:false,resettable:false},
-  ],
-  'ilp':[
-    {key:'deposit',   label:'Deposit',          icon:'🏠',target:1800,color:'#f5a623',milestone:true, resettable:false},
-    {key:'buffer',    label:'Emergency Buffer', icon:'🛡️',target:3657,color:'#4a9eff',milestone:false,resettable:false},
-    {key:'holiday',   label:'Holiday Fund',     icon:'🏖️',target:1200,color:'#8b5cf6',milestone:false,resettable:true},
-    {key:'obelisk',   label:'Obelisk',          icon:'🔷',target:2000,color:'#0ea5e9',milestone:false,resettable:false},
-    {key:'dj',        label:'DJ Controller',    icon:'🎛️',target:1000,color:'#ec4899',milestone:false,resettable:false},
-  ],
-};
-
-const ISA_S1 =['california','buffer','holidays','obelisk'];
-const ISA_ILP=['deposit','buffer','holiday','obelisk','dj'];
+// Savings goals — fully user-editable (add/edit/delete in the Savings screen).
+// phaseGroup: 'all' | 's1' | 'ilp' — controls which life-stage phase shows the goal.
+// targetDate (optional): drives the "£/mo needed" pace calculator.
+const DEFAULT_POTS=[
+  {key:'california',label:'California',       icon:'🌴',target:3000,color:'#22c98a',milestone:false,resettable:false,isa:true,phaseGroup:'s1', targetDate:''},
+  {key:'buffer',    label:'Emergency Buffer',  icon:'🛡️',target:3657,color:'#4a9eff',milestone:false,resettable:false,isa:true,phaseGroup:'all',targetDate:''},
+  {key:'holidays',  label:'Small Holidays',    icon:'🏖️',target:600, color:'#8b5cf6',milestone:false,resettable:true, isa:true,phaseGroup:'s1', targetDate:''},
+  {key:'obelisk',   label:'Obelisk',           icon:'🔷',target:2000,color:'#0ea5e9',milestone:false,resettable:false,isa:true,phaseGroup:'all',targetDate:''},
+  {key:'deposit',   label:'Deposit',           icon:'🏠',target:1800,color:'#f5a623',milestone:true, resettable:false,isa:true,phaseGroup:'ilp',targetDate:''},
+  {key:'holiday',   label:'Holiday Fund',      icon:'🏖️',target:1200,color:'#8b5cf6',milestone:false,resettable:true, isa:true,phaseGroup:'ilp',targetDate:''},
+  {key:'dj',        label:'DJ Controller',     icon:'🎛️',target:1000,color:'#ec4899',milestone:false,resettable:false,isa:true,phaseGroup:'ilp',targetDate:''},
+];
 
 const PHASES=[
   {key:'s1',          label:'S1 — Current Path',    desc:'Shared household · Partner contributes £1,200 · California goal active'},
@@ -967,7 +999,7 @@ const FREQ_OPTIONS=[
 
 let currentPhase='s1', selectedPhase='s1';
 let recurringList=[], customBudget={};
-let potBalances={}, drivingTotal=0;
+let potsList=[], potBalances={}, drivingTotal=0;
 let allocSurplus=0, allocAmounts={};
 let activePotKey=null;
 let currentType='expense', selectedCat=null, selectedSource=null;
@@ -977,8 +1009,9 @@ let editingRecurringId=null, editingBudgetKey=null;
 
 // ─── HELPERS ──────────────────────────────────────────────
 
-function getActivePots(){return currentPhase==='s1'?PHASE_POTS['s1']:PHASE_POTS['ilp'];}
-function getActiveISA(){return currentPhase==='s1'?ISA_S1:ISA_ILP;}
+function currentPhaseGroup(){return currentPhase==='s1'?'s1':'ilp';}
+function getActivePots(){const g=currentPhaseGroup();return potsList.filter(p=>!p.phaseGroup||p.phaseGroup==='all'||p.phaseGroup===g);}
+function getActiveISA(){return getActivePots().filter(p=>p.isa).map(p=>p.key);}
 function getTracked(){return['bills','groceries','coffee','dog','travel','shopping','experiences','subscriptions'];}
 function fmt(n){return'£'+Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
 function todayStr(){return new Date().toISOString().split('T')[0];}
@@ -1159,10 +1192,12 @@ function loadAll(){
   recurringList=r?JSON.parse(r):JSON.parse(JSON.stringify(DEFAULT_RECURRING));
   const b=localStorage.getItem('fwsBudget');
   customBudget=b?JSON.parse(b):{};
+  const pl=localStorage.getItem('fwsPotsList');
+  potsList=pl?JSON.parse(pl):JSON.parse(JSON.stringify(DEFAULT_POTS));
   const p=localStorage.getItem('fwsPotBalances');
   potBalances=p?JSON.parse(p):{};
   drivingTotal=parseFloat(localStorage.getItem('fwsDriving')||'0');
-  [...PHASE_POTS['s1'],...PHASE_POTS['ilp']].forEach(pot=>{if(potBalances[pot.key]===undefined)potBalances[pot.key]=0;});
+  potsList.forEach(pot=>{if(potBalances[pot.key]===undefined)potBalances[pot.key]=0;});
 }
 
 // saveAll: always write to localStorage for speed + write synced data to Sheet
@@ -1170,6 +1205,7 @@ function saveAll(){
   localStorage.setItem('fwsPhase',currentPhase);
   localStorage.setItem('fwsRecurring',JSON.stringify(recurringList));
   localStorage.setItem('fwsBudget',JSON.stringify(customBudget));
+  localStorage.setItem('fwsPotsList',JSON.stringify(potsList));
   localStorage.setItem('fwsPotBalances',JSON.stringify(potBalances));
   localStorage.setItem('fwsDriving',drivingTotal.toString());
   // Sync pots and settings to Sheet
@@ -1178,6 +1214,7 @@ function saveAll(){
     phase: currentPhase,
     recurring: JSON.stringify(recurringList),
     budget: JSON.stringify(customBudget),
+    potsList: JSON.stringify(potsList),
   });
 }
 
@@ -1216,6 +1253,13 @@ async function syncFromSheet(){
       try{
         customBudget=JSON.parse(sheetSettings.budget);
         localStorage.setItem('fwsBudget',sheetSettings.budget);
+      }catch(e){}
+    }
+    if(sheetSettings.potsList){
+      try{
+        potsList=JSON.parse(sheetSettings.potsList);
+        localStorage.setItem('fwsPotsList',sheetSettings.potsList);
+        potsList.forEach(pot=>{if(potBalances[pot.key]===undefined)potBalances[pot.key]=0;});
       }catch(e){}
     }
 
@@ -1776,9 +1820,9 @@ async function renderSavings(){
       ${badge?`<div class="pot-card-badge">${badge}</div>`:''}
       <div class="pot-card-header"><div class="pot-card-name">${p.icon} ${p.label}</div><div class="pot-card-amounts"><strong>${fmt(bal)}</strong> of ${fmt(p.target)}</div></div>
       <div class="pot-bar-bg"><div class="pot-bar-fill" style="width:${pct}%;background:${p.color};"></div></div>
-      <div class="pot-card-meta"><div>${pct.toFixed(0)}% funded</div><div>${complete?'Target reached':fmt(p.target-bal)+' to go'}</div></div>
+      <div class="pot-card-meta"><div>${pct.toFixed(0)}% funded</div><div>${complete?'Target reached':fmt(p.target-bal)+' to go'}${p.targetDate?' · by '+p.targetDate:''}</div></div>
     </div>`;
-  }).join('');
+  }).join('') + `<button onclick="openAddGoal()" style="width:100%;background:var(--surface);border:1px dashed var(--border);border-radius:var(--radius-sm);color:var(--muted);padding:14px;font-size:.82rem;cursor:pointer;font-family:var(--font-mono);letter-spacing:.08em;text-transform:uppercase;margin-top:4px;">+ Add savings goal</button>`;
   const dp=Math.max(0,Math.min(100,(drivingTotal/1800)*100));
   document.getElementById('driving-spent').textContent=fmt(drivingTotal);
   document.getElementById('driving-bar').style.width=dp+'%';
@@ -1801,7 +1845,17 @@ function openPotSheet(key){
   document.getElementById('pot-sheet-progress').textContent=`${fmt(bal)} saved · ${fmt(p.target-bal)} to go`;
   document.getElementById('pot-add-input').value='';
   document.getElementById('pot-reset-wrap').innerHTML=p.resettable?`<button onclick="resetPot()" class="full-btn btn-ghost">↺ Reset pot (after trip)</button>`:'';
+  document.getElementById('pot-sheet-pace').innerHTML=potPaceHtml(p,bal);
   openSheet('pot-overlay');
+}
+function potPaceHtml(p,bal){
+  const remaining=p.target-bal;
+  if(remaining<=0)return`<div style="font-family:var(--font-mono);font-size:.68rem;color:var(--green);">Target reached 🎉</div>`;
+  if(!p.targetDate)return'';
+  const days=Math.ceil((new Date(p.targetDate)-new Date(todayStr()))/86400000);
+  if(days<=0)return`<div style="font-family:var(--font-mono);font-size:.68rem;color:var(--red);">Target date (${p.targetDate}) has passed — ${fmt(remaining)} still to go</div>`;
+  const perMonth=remaining/Math.max(1,days/30.44);
+  return`<div style="font-family:var(--font-mono);font-size:.68rem;color:var(--yellow);">Need ${fmt(perMonth)}/mo to hit ${fmt(p.target)} by ${p.targetDate}</div>`;
 }
 function addToPot(){
   const amount=parseFloat(document.getElementById('pot-add-input').value);
@@ -1814,6 +1868,71 @@ function resetPot(){
   if(!confirm('Reset this pot?'))return;
   potBalances[activePotKey]=0;saveAll();showToast('Pot reset ✓','success');
   closeSheet('pot-overlay');renderSavings();
+}
+function openAddGoal(){
+  activePotKey=null;
+  document.getElementById('goal-edit-title').textContent='Add savings goal';
+  document.getElementById('goal-icon').value='🎯';
+  document.getElementById('goal-name').value='';
+  document.getElementById('goal-target').value='';
+  document.getElementById('goal-date').value='';
+  document.getElementById('goal-color').value='#4a9eff';
+  document.getElementById('goal-phase').value='all';
+  document.getElementById('goal-milestone').checked=false;
+  document.getElementById('goal-resettable').checked=false;
+  document.getElementById('goal-isa').checked=true;
+  document.getElementById('goal-delete-btn').style.display='none';
+  document.getElementById('goal-save-btn').style.gridColumn='1/-1';
+  openSheet('goal-edit-overlay');
+}
+function openEditGoal(key){
+  activePotKey=key;
+  const p=potsList.find(x=>x.key===key);if(!p)return;
+  document.getElementById('goal-edit-title').textContent='Edit savings goal';
+  document.getElementById('goal-icon').value=p.icon;
+  document.getElementById('goal-name').value=p.label;
+  document.getElementById('goal-target').value=p.target;
+  document.getElementById('goal-date').value=p.targetDate||'';
+  document.getElementById('goal-color').value=p.color||'#4a9eff';
+  document.getElementById('goal-phase').value=p.phaseGroup||'all';
+  document.getElementById('goal-milestone').checked=!!p.milestone;
+  document.getElementById('goal-resettable').checked=!!p.resettable;
+  document.getElementById('goal-isa').checked=p.isa!==false;
+  document.getElementById('goal-delete-btn').style.display='block';
+  document.getElementById('goal-save-btn').style.gridColumn='2/3';
+  closeSheet('pot-overlay');
+  openSheet('goal-edit-overlay');
+}
+function saveGoal(){
+  const label=document.getElementById('goal-name').value.trim();
+  const icon=document.getElementById('goal-icon').value.trim()||'🎯';
+  const target=parseFloat(document.getElementById('goal-target').value);
+  const targetDate=document.getElementById('goal-date').value;
+  const color=document.getElementById('goal-color').value;
+  const phaseGroup=document.getElementById('goal-phase').value;
+  const milestone=document.getElementById('goal-milestone').checked;
+  const resettable=document.getElementById('goal-resettable').checked;
+  const isa=document.getElementById('goal-isa').checked;
+
+  if(!label){showToast('Enter a name','error');return;}
+  if(!target||target<=0){showToast('Enter a target amount','error');return;}
+
+  if(activePotKey){
+    const p=potsList.find(x=>x.key===activePotKey);
+    if(p)Object.assign(p,{label,icon,target,targetDate,color,phaseGroup,milestone,resettable,isa});
+  }else{
+    const key=`pot_${Date.now()}`;
+    potsList.push({key,label,icon,target,targetDate,color,phaseGroup,milestone,resettable,isa});
+    potBalances[key]=0;
+  }
+  saveAll();closeSheet('goal-edit-overlay');renderSavings();
+  showToast(activePotKey?'Goal updated ✓':'Goal added ✓','success');
+}
+function deleteGoal(){
+  if(!activePotKey)return;
+  if(!confirm('Delete this savings goal? (Its saved balance stays in the Sheet but will no longer show here.)'))return;
+  potsList=potsList.filter(p=>p.key!==activePotKey);
+  saveAll();closeSheet('goal-edit-overlay');renderSavings();showToast('Goal deleted','success');
 }
 function openWithdrawSheet(){
   document.getElementById('withdraw-input').value='';

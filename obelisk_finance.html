@@ -540,6 +540,8 @@ body{
   <div style="padding:0 16px;margin-bottom:16px;">
     <button onclick="openAddCategory()" style="width:100%;background:var(--surface);border:1px dashed var(--border);border-radius:var(--radius-sm);color:var(--muted);padding:14px;font-size:.82rem;cursor:pointer;font-family:var(--font-mono);letter-spacing:.08em;text-transform:uppercase;">+ Add category</button>
   </div>
+  <div class="section-label">Unmatched recurring</div>
+  <div class="settings-section" id="unmatched-recurring-list"><div class="loading"><span class="spinner"></span>Checking...</div></div>
   <div class="section-label">Recurring payments</div>
   <div class="settings-section" id="recurring-list"></div>
   <div style="padding:0 16px;margin-bottom:16px;">
@@ -2622,6 +2624,51 @@ function renderSettings(){
 
   document.getElementById('recurring-list').innerHTML=activeRecurring.length?groupsHtml:`<div class="empty-state" style="padding:20px;">No recurring payments</div>`;
   renderSecuritySettings();
+  renderUnmatchedRecurring();
+}
+
+// Flags 'single'-match recurring items with a past occurrence that never
+// matched a real transaction — usually a naming mismatch (bank text vs
+// recurring name) or a genuinely missed payment. 'budget'-mode items are
+// deliberately excluded: they're meant to be covered by several smaller
+// transactions rather than one match, so "unmatched" isn't a meaningful
+// signal for them. Only the most recent miss per item is shown, tapping it
+// opens the same manage-recurring flow used from the calendar.
+async function renderUnmatchedRecurring(){
+  const el=document.getElementById('unmatched-recurring-list');
+  if(!el)return;
+  const txs=await loadTransactions();
+  const today=new Date();today.setHours(0,0,0,0);
+  const lookbackStart=new Date(today.getTime()-120*86400000);
+
+  const findings=[];
+  recurringList.forEach(r=>{
+    if((r.matchMode||'single')==='budget')return;
+    if(r.endDate&&r.endDate<=dateStr(lookbackStart))return;
+    const occs=getOccurrences(r,lookbackStart,today).filter(d=>d<today);
+    if(!occs.length)return;
+    // Only the most recent past occurrence matters — an old gap that's
+    // since been paid and matched normally isn't a live problem worth
+    // surfacing, even if some earlier cycle was never logged.
+    const latest=occs[occs.length-1];
+    const ds=dateStr(latest);
+    if(!matchesRecurring(txs,r,ds))findings.push({r,date:ds});
+  });
+
+  if(!findings.length){
+    el.innerHTML=`<div class="empty-state" style="padding:16px;font-size:.75rem;">✅ Everything's matched</div>`;
+    return;
+  }
+  findings.sort((a,b)=>a.date.localeCompare(b.date));
+  el.innerHTML=findings.map(({r,date})=>{
+    const cat=BUDGET[r.cat]||{icon:'💷'};
+    const nice=new Date(date).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    return `<div class="settings-row" onclick="openManageRecurring('${r.id}','${date}')">
+      <div class="settings-row-left"><div class="settings-row-icon">${r.type==='income'?'💰':cat.icon}</div>
+      <div><div class="settings-row-label">${r.name}</div><div class="settings-row-sub">Last due ${nice} · not matched</div></div></div>
+      <div class="settings-row-right">${fmt(r.amount)}<span class="settings-chevron">›</span></div>
+    </div>`;
+  }).join('');
 }
 function openPhaseSheet(){
   selectedPhase=currentPhase;

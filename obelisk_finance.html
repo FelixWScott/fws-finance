@@ -1706,6 +1706,35 @@ function toggleProjBreakdown(){
   w.style.display=w.style.display==='none'?'block':'none';
 }
 
+// Remaining projected expenses for one category, working-month-scoped — same
+// recurring-occurrence + one-off-projection logic the Dashboard's "Projected
+// end" figure uses, just filtered to a single category and returned as line
+// items instead of a total.
+function getProjectedItemsForCategory(cat, txs){
+  const {end:wEnd}=getMonthRange();
+  const projFrom=new Date();
+  const wEndX=new Date(wEnd.getTime()-1);
+  const wEndStr=dateStr(wEnd),projFromStr=dateStr(projFrom);
+  const items=[];
+
+  recurringList.forEach(r=>{
+    if((r.type||'expense')!=='expense'||(r.cat||'other')!==cat)return;
+    getOccurrences(r,projFrom,wEndX,true).forEach(d2=>{
+      const remaining=projectedRemaining(txs,r,d2);
+      if(remaining>0)items.push({name:r.name,date:dateStr(d2),amount:remaining});
+    });
+  });
+
+  txs.filter(t=>t.type==='projected'&&t.recurring!=='matched'&&!(t.source&&t.source.length>0)&&(t.category||'other')===cat)
+    .forEach(t=>{
+      const d=String(t.date).split('T')[0];
+      if(d>=projFromStr&&d<wEndStr)items.push({name:t.note||'Projected',date:d,amount:t.amount});
+    });
+
+  items.sort((a,b)=>a.date.localeCompare(b.date));
+  return items;
+}
+
 async function openBudgetDrill(cat) {
   const b = BUDGET[cat];
   if (!b) return;
@@ -1717,7 +1746,24 @@ async function openBudgetDrill(cat) {
   document.getElementById('drill-title').textContent = `${b.icon} ${b.label}`;
   document.getElementById('drill-sub').textContent = `${fmt(total)} spent · ${rem>=0?fmt(rem)+' remaining':fmt(Math.abs(rem))+' over'} · ${catTxs.length} transaction${catTxs.length!==1?'s':''}`;
 
-  document.getElementById('drill-list').innerHTML = catTxs.length
+  const projItems = getProjectedItemsForCategory(cat, txs);
+  const projTotal = projItems.reduce((s,p)=>s+p.amount,0);
+  const projectedHtml = projItems.length ? `
+    <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin:4px 0 8px;">Still to come this month · ${fmt(projTotal)}</div>
+    ${projItems.map(p=>{
+      const ds=new Date(p.date).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+      return `<div class="day-tx-item day-tx-proj" style="margin-bottom:6px;cursor:default;">
+        <div class="day-tx-left">
+          <div class="day-tx-icon">${b.icon}</div>
+          <div><div class="day-tx-name">${p.name}</div><div class="day-tx-note">${ds} · projected</div></div>
+        </div>
+        <div class="day-tx-amount" style="color:var(--muted);">-${fmt(p.amount)}</div>
+      </div>`;
+    }).join('')}
+    <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin:14px 0 8px;border-top:1px solid var(--border);padding-top:12px;">Logged</div>
+  ` : '';
+
+  document.getElementById('drill-list').innerHTML = projectedHtml + (catTxs.length
     ? [...catTxs].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(t => {
         const ds = new Date(t.date).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
         return `<div class="day-tx-item" style="margin-bottom:6px;cursor:default;">
@@ -1728,7 +1774,7 @@ async function openBudgetDrill(cat) {
           <div class="day-tx-amount" style="color:var(--accent);">-${fmt(t.amount)}</div>
         </div>`;
       }).join('')
-    : `<div class="empty-state" style="padding:20px;"><div class="empty-icon">${b.icon}</div>Nothing logged in this category yet</div>`;
+    : `<div class="empty-state" style="padding:20px;"><div class="empty-icon">${b.icon}</div>Nothing logged in this category yet</div>`);
 
   openSheet('budget-drill-overlay');
 }

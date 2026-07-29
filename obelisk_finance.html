@@ -1559,6 +1559,10 @@ async function renderDashboard(){
   const wEndX=new Date(wEnd.getTime()-1);
   recurringList.forEach(r=>{
     getOccurrences(r,projFrom,wEndX,true).forEach(d2=>{
+      // An overdue occurrence from before this working month started belongs
+      // to last cycle's books, not this one's projection — even though it's
+      // still unmatched, counting it here would inflate the wrong month.
+      if(d2<wStart)return;
       const remaining=projectedRemaining(txs,r,d2);
       if(remaining>0){
         if((r.type||'expense')==='expense'){
@@ -1726,7 +1730,7 @@ function toggleProjBreakdown(){
 // end" figure uses, just filtered to a single category and returned as line
 // items instead of a total.
 function getProjectedItemsForCategory(cat, txs){
-  const {end:wEnd}=getMonthRange();
+  const {start:wStart,end:wEnd}=getMonthRange();
   const projFrom=new Date();
   const wEndX=new Date(wEnd.getTime()-1);
   const wEndStr=dateStr(wEnd),projFromStr=dateStr(projFrom);
@@ -1735,6 +1739,9 @@ function getProjectedItemsForCategory(cat, txs){
   recurringList.forEach(r=>{
     if((r.type||'expense')!=='expense'||(r.cat||'other')!==cat)return;
     getOccurrences(r,projFrom,wEndX,true).forEach(d2=>{
+      // Same rule as the Dashboard: an overdue occurrence from before this
+      // working month started belongs to last cycle's books, not this one.
+      if(d2<wStart)return;
       const remaining=projectedRemaining(txs,r,d2);
       if(remaining>0)items.push({name:r.name,date:dateStr(d2),amount:remaining,overdue:d2<projFrom});
     });
@@ -1988,6 +1995,9 @@ async function renderCalendar(){
     const wEndX=new Date(wEnd.getTime()-1); // exclusive — the 25th belongs to next working month
     recurringList.forEach(r=>{
       getOccurrences(r,projFrom,wEndX,true).forEach(d2=>{
+        // Same rule as the Dashboard: an overdue occurrence from before this
+        // working month started belongs to last cycle's books, not this one.
+        if(d2<wStart)return;
         const remaining=projectedRemaining(calTxCache,r,d2);
         if(remaining>0){
           if((r.type||'expense')==='expense')projExp+=remaining;

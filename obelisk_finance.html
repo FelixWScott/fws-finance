@@ -2586,11 +2586,14 @@ function renderSettings(){
     <div style="font-family:var(--font-mono);font-size:.88rem;color:var(--yellow);">${fmt(budgetTotal)}/mo</div>
   </div>`;
   // Group recurring payments: Income first, then by expense category.
-  // Templates already ended (e.g. superseded by a price-change split) stay in
-  // recurringList so their past occurrences still match correctly, but are
-  // hidden here — nothing left to manage on a template that's already over.
+  // A template with an end date set (via "End from this date", or the older
+  // half of a price-change split) is hidden here immediately, not just once
+  // that date passes — you've already decided its fate, nothing left to
+  // manage. It stays in recurringList underneath so its past transactions
+  // keep matching and it still generates any occurrences still due before
+  // its end date; only the visible "things you can manage" list drops it.
   const catOrder=['bills','groceries','coffee','dog','travel','shopping','experiences','subscriptions','driving','other'];
-  const activeRecurring=recurringList.filter(r=>!r.endDate||r.endDate>todayStr());
+  const activeRecurring=recurringList.filter(r=>!r.endDate);
   const incomeItems=activeRecurring.filter(r=>r.type==='income');
   const expenseByCat={};
   activeRecurring.filter(r=>r.type!=='income').forEach(r=>{

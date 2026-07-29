@@ -1172,14 +1172,18 @@ function getOccurrences(r, from, to, includeActivePeriod) {
       return n;
     };
     let d = new Date(from.getFullYear(), from.getMonth(), day);
-    // Only correct the same-day edge case (comparing calendar days, not exact
-    // timestamps) — deliberately NOT stepping further back than this month's
-    // slot. A monthly/quarterly/annual period is nearly as long as the whole
-    // projection window itself, so reaching back further would double-count:
-    // e.g. a bill due on the 7th, checked on the 27th, would otherwise pull in
-    // both "this month's 7th" (still technically unmatched) and next month's
-    // 7th in the same total, once the window is wide enough to span both.
-    if (d.getTime() < fromDay.getTime()) d = stepFwd(d);
+    if (includeActivePeriod) {
+      // Deliberately do NOT skip an overdue slot here — an unresolved bill
+      // (still unmatched past its due date) should keep counting as still
+      // outstanding rather than silently vanishing from the projection the
+      // moment its date passes. The caller distinguishes it from a normal
+      // upcoming occurrence by comparing the returned date to today.
+    } else if (d.getTime() < fromDay.getTime()) {
+      // Strict range-query mode (e.g. calendar day-cell rendering for a
+      // specific viewed month) — just skip forward past an already-elapsed
+      // slot, same as before.
+      d = stepFwd(d);
+    }
     while (d <= to) {
       dates.push(new Date(d));
       const next = stepFwd(d);
@@ -1732,7 +1736,7 @@ function getProjectedItemsForCategory(cat, txs){
     if((r.type||'expense')!=='expense'||(r.cat||'other')!==cat)return;
     getOccurrences(r,projFrom,wEndX,true).forEach(d2=>{
       const remaining=projectedRemaining(txs,r,d2);
-      if(remaining>0)items.push({name:r.name,date:dateStr(d2),amount:remaining});
+      if(remaining>0)items.push({name:r.name,date:dateStr(d2),amount:remaining,overdue:d2<projFrom});
     });
   });
 
@@ -1763,12 +1767,14 @@ async function openBudgetDrill(cat) {
     <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin:4px 0 8px;">Still to come this month · ${fmt(projTotal)}</div>
     ${projItems.map(p=>{
       const ds=new Date(p.date).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
-      return `<div class="day-tx-item day-tx-proj" style="margin-bottom:6px;cursor:default;">
+      const cls=p.overdue?'day-tx-pastdue':'day-tx-proj';
+      const amtColor=p.overdue?'var(--yellow)':'var(--muted)';
+      return `<div class="day-tx-item ${cls}" style="margin-bottom:6px;cursor:default;">
         <div class="day-tx-left">
           <div class="day-tx-icon">${b.icon}</div>
-          <div><div class="day-tx-name">${p.name}</div><div class="day-tx-note">${ds} · projected</div></div>
+          <div><div class="day-tx-name">${p.name}</div><div class="day-tx-note">${ds} · ${p.overdue?'overdue, unmatched':'projected'}</div></div>
         </div>
-        <div class="day-tx-amount" style="color:var(--muted);">-${fmt(p.amount)}</div>
+        <div class="day-tx-amount" style="color:${amtColor};">-${fmt(p.amount)}</div>
       </div>`;
     }).join('')}
     <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin:14px 0 8px;border-top:1px solid var(--border);padding-top:12px;">Logged</div>

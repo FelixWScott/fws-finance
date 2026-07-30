@@ -865,10 +865,11 @@ body{
         <input type="number" id="rec-day" placeholder="e.g. 1" min="1" max="31" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:14px;font-size:1rem;width:100%;outline:none;font-family:var(--font-mono);" inputmode="numeric"/>
       </div>
 
-      <!-- Start date (week-based frequencies) -->
-      <div class="field" id="rec-start-field" style="display:none;">
-        <label>Start date (first occurrence)</label>
+      <!-- Start date -->
+      <div class="field" id="rec-start-field">
+        <label>Start date</label>
         <input type="date" id="rec-startdate" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:14px;font-size:1rem;width:100%;outline:none;font-family:var(--font-mono);"/>
+        <div style="font-family:var(--font-mono);font-size:.58rem;color:var(--muted);margin-top:6px;line-height:1.4;" id="rec-start-hint"></div>
       </div>
 
       <!-- Category (expense) -->
@@ -2886,7 +2887,9 @@ function handleFreqChange(){
   const freq=document.getElementById('rec-freq').value;
   const weekBased=['weekly','fortnightly','3weekly','4weekly'];
   document.getElementById('rec-day-field').style.display=weekBased.includes(freq)?'none':'';
-  document.getElementById('rec-start-field').style.display=weekBased.includes(freq)?'':'none';
+  document.getElementById('rec-start-hint').textContent=weekBased.includes(freq)
+    ?'Required — the date of the first occurrence, used to anchor the cycle.'
+    :'Optional — set this when starting a new subscription so it won\'t show up in past months.';
 }
 
 function openAddRecurring(){
@@ -2934,7 +2937,7 @@ function saveRecurring(){
   const freq=document.getElementById('rec-freq').value;
   const weekBased=['weekly','fortnightly','3weekly','4weekly'];
   const day=weekBased.includes(freq)?null:parseInt(document.getElementById('rec-day').value);
-  const startDate=weekBased.includes(freq)?document.getElementById('rec-startdate').value:'';
+  const startDate=document.getElementById('rec-startdate').value;
   const cat=document.getElementById('rec-cat').value;
 
   if(!name){showToast('Enter a name','error');return;}

@@ -638,7 +638,14 @@ body{
   <div class="bottom-sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-header">
-      <div><div style="font-size:1rem;font-weight:700;" id="day-sheet-date">—</div><div style="font-size:.72rem;color:var(--muted);" id="day-sheet-total">—</div></div>
+      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+        <button onclick="changeDaySheet(-1)" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);width:30px;height:30px;flex-shrink:0;color:var(--text);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">‹</button>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:1rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="day-sheet-date">—</div>
+          <div style="font-size:.72rem;color:var(--muted);" id="day-sheet-total">—</div>
+        </div>
+        <button onclick="changeDaySheet(1)" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);width:30px;height:30px;flex-shrink:0;color:var(--text);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">›</button>
+      </div>
       <button class="sheet-close" onclick="closeSheet('day-overlay')">✕</button>
     </div>
     <div style="padding:12px 16px;" id="day-sheet-txs"></div>
@@ -2051,13 +2058,29 @@ function calChangeMonth(dir){calMonth+=dir;if(calMonth>11){calMonth=0;calYear++;
 })();
 
 function openDaySheet(day){
-  daySheetDate=new Date(calYear,calMonth,day);
+  renderDaySheetContent(new Date(calYear,calMonth,day));
+  openSheet('day-overlay');
+}
+// Cycles the open day sheet forward/back by whole days, crossing month
+// boundaries freely (Date.setDate handles that natively) — the sheet stays
+// open and just re-renders in place instead of closing and reopening.
+function changeDaySheet(delta){
+  const next=new Date(daySheetDate);
+  next.setDate(next.getDate()+delta);
+  if(next.getFullYear()!==calYear||next.getMonth()!==calMonth){
+    calYear=next.getFullYear();calMonth=next.getMonth();
+    renderCalendar(); // keep the grid behind the sheet in sync, fire-and-forget
+  }
+  renderDaySheetContent(next);
+}
+function renderDaySheetContent(date){
+  daySheetDate=date;
+  const y=date.getFullYear(),m=date.getMonth(),day=date.getDate();
   document.getElementById('day-sheet-date').textContent=daySheetDate.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
   const todayD=new Date();todayD.setHours(0,0,0,0);
-  const dayDate=new Date(calYear,calMonth,day);
-  const realTxs=calTxCache.filter(t=>{const d=new Date(t.date);return d.getFullYear()===calYear&&d.getMonth()===calMonth&&d.getDate()===day&&t.type!=='transfer';});
+  const realTxs=calTxCache.filter(t=>{const d=new Date(t.date);return d.getFullYear()===y&&d.getMonth()===m&&d.getDate()===day&&t.type!=='transfer';});
   const projTxs=[];
-  const monthStart=new Date(calYear,calMonth,1),monthEnd=new Date(calYear,calMonth+1,0,23,59,59);
+  const monthStart=new Date(y,m,1),monthEnd=new Date(y,m+1,0,23,59,59);
   recurringList.forEach(r=>{
     const matchMode=r.matchMode||'single';
     getOccurrences(r,monthStart,monthEnd).forEach(d2=>{
@@ -2097,7 +2120,6 @@ function openDaySheet(day){
       <div class="day-tx-amount" style="color:${ac}">${px}${fmt(t.amount)}</div>
     </div>`;
   }).join(''):`<div class="empty-state" style="padding:20px;"><div class="empty-icon">📭</div>Nothing logged for this day</div>`;
-  openSheet('day-overlay');
 }
 function addFromDay(){
   const d=daySheetDate;
@@ -3366,6 +3388,26 @@ function setupIconObserver(){
   iconObserver.observe(document.body, {childList:true, subtree:true, characterData:true});
 }
 
+// Swipe left/right on the day sheet to cycle days, same effect as the arrow
+// buttons — bound once at init since the element is static, just start/end
+// position (no live drag), and only fires on a predominantly horizontal
+// swipe so it doesn't fight with normal vertical scrolling of the tx list.
+let daySheetTouchStart=null;
+function setupDaySheetSwipe(){
+  const el=document.getElementById('day-sheet-txs');
+  if(!el)return;
+  el.addEventListener('touchstart',e=>{
+    daySheetTouchStart={x:e.touches[0].clientX,y:e.touches[0].clientY};
+  },{passive:true});
+  el.addEventListener('touchend',e=>{
+    if(!daySheetTouchStart)return;
+    const dx=e.changedTouches[0].clientX-daySheetTouchStart.x;
+    const dy=e.changedTouches[0].clientY-daySheetTouchStart.y;
+    daySheetTouchStart=null;
+    if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5)changeDaySheet(dx<0?1:-1);
+  },{passive:true});
+}
+
 let currentTheme = 'cyber';
 
 function setTheme(name) {
@@ -3421,6 +3463,7 @@ async function init(){
   currentTheme=savedTheme;
   applyTheme(savedTheme);
   setupIconObserver();
+  setupDaySheetSwipe();
   await initSheet();
   flushPendingWrites();
   // Sync pots and settings from Sheet (source of truth)

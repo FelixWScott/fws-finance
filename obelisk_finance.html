@@ -1559,7 +1559,7 @@ async function renderDashboard(){
   // Projected month end — actual + upcoming recurring + one-off projections before the 25th
   const {start:wStart,end:wEnd}=getMonthRange();
   const projFrom=new Date();
-  const wEndStr=dateStr(wEnd),projFromStr=dateStr(projFrom);
+  const wEndStr=dateStr(wEnd),projFromStr=dateStr(projFrom),wStartStr=dateStr(wStart);
   let projExp=0,projInc=0;
   const projByCat={};
 
@@ -1583,10 +1583,13 @@ async function renderDashboard(){
     });
   });
 
-  // One-off projected transactions from Sheet (not yet matched)
+  // One-off projected transactions from Sheet (not yet matched) — an overdue
+  // one-off (date already passed but no matching real transaction landed)
+  // keeps counting rather than silently dropping out, same treatment as
+  // recurring occurrences: it's still outstanding until matched or deleted.
   txs.filter(t=>t.type==='projected'&&t.recurring!=='matched').forEach(t=>{
     const d=String(t.date).split('T')[0];
-    if(d>=projFromStr&&d<wEndStr){
+    if(d>=wStartStr&&d<wEndStr){
       // Has a source = income projection, otherwise expense
       if(t.source&&t.source.length>0) projInc+=t.amount;
       else{
@@ -1741,7 +1744,7 @@ function getProjectedItemsForCategory(cat, txs){
   const {start:wStart,end:wEnd}=getMonthRange();
   const projFrom=new Date();
   const wEndX=new Date(wEnd.getTime()-1);
-  const wEndStr=dateStr(wEnd),projFromStr=dateStr(projFrom);
+  const wEndStr=dateStr(wEnd),projFromStr=dateStr(projFrom),wStartStr=dateStr(wStart);
   const items=[];
 
   recurringList.forEach(r=>{
@@ -1758,7 +1761,7 @@ function getProjectedItemsForCategory(cat, txs){
   txs.filter(t=>t.type==='projected'&&t.recurring!=='matched'&&!(t.source&&t.source.length>0)&&(t.category||'other')===cat)
     .forEach(t=>{
       const d=String(t.date).split('T')[0];
-      if(d>=projFromStr&&d<wEndStr)items.push({name:t.note||'Projected',date:d,amount:t.amount});
+      if(d>=wStartStr&&d<wEndStr)items.push({name:t.note||'Projected',date:d,amount:t.amount,overdue:d<projFromStr});
     });
 
   items.sort((a,b)=>a.date.localeCompare(b.date));
@@ -2013,10 +2016,11 @@ async function renderCalendar(){
         }
       });
     });
-    // One-off projected transactions (string comparison)
+    // One-off projected transactions (string comparison) — stays counted once
+    // overdue, same as recurring occurrences, until matched or deleted.
     calTxCache.filter(t=>t.type==='projected'&&t.recurring!=='matched').forEach(t=>{
       const d=String(t.date).split('T')[0];
-      if(d>=projFromStr&&d<wEndStr){
+      if(d>=wStartStr&&d<wEndStr){
         if(t.source&&t.source.length>0) projInc+=t.amount;
         else projExp+=t.amount;
       }

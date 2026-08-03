@@ -303,8 +303,10 @@ body{
 .recurring-amount{font-size:.88rem;font-weight:700;color:var(--red);}
 .phase-option{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:8px;cursor:pointer;}
 .phase-option.selected{border-color:var(--accent);background:var(--accent-soft);}
+.phase-option.dragging{opacity:.85;box-shadow:0 6px 16px rgba(0,0,0,.35);position:relative;z-index:5;cursor:grabbing;}
 .phase-option-label{font-size:.85rem;font-weight:700;margin-bottom:3px;}
 .phase-option-desc{font-size:.72rem;color:var(--muted);}
+.phase-drag-handle{cursor:grab;touch-action:none;color:var(--muted);font-size:1.05rem;line-height:1;padding:4px 8px 4px 0;flex-shrink:0;user-select:none;-webkit-user-select:none;}
 
 /* APP LOCK */
 #lock-screen{position:fixed;inset:0;background:var(--bg);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:24px;text-align:center;}
@@ -2719,8 +2721,9 @@ async function renderUnmatchedRecurring(){
 function openPhaseSheet(){
   selectedPhase=currentPhase;
   document.getElementById('phase-options').innerHTML=phasesList.map(p=>`
-    <div class="phase-option${p.key===selectedPhase?' selected':''}" onclick="selectPhase('${p.key}',this)">
+    <div class="phase-option${p.key===selectedPhase?' selected':''}" data-key="${p.key}" onclick="selectPhase('${p.key}',this)">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div class="phase-drag-handle" onpointerdown="startPhaseDrag(event,this)" onclick="event.stopPropagation();">⠿</div>
         <div style="flex:1;min-width:0;">
           <div class="phase-option-label">${p.label}</div>
           <div class="phase-option-desc">${p.desc}</div>
@@ -2734,6 +2737,60 @@ function selectPhase(key,el){
   selectedPhase=key;
   document.querySelectorAll('.phase-option').forEach(o=>o.classList.remove('selected'));
   el.classList.add('selected');
+}
+
+// Drag-to-reorder for the phase list — the dragged row's transform is
+// computed from its own offsetTop (not a fixed start position) so that
+// reordering the DOM mid-drag doesn't cause it to visually jump.
+let phaseDrag=null;
+function startPhaseDrag(e,handle){
+  e.preventDefault();e.stopPropagation();
+  const row=handle.closest('.phase-option');
+  if(!row)return;
+  phaseDrag={row,startPointerY:e.clientY,startTop:row.offsetTop};
+  row.classList.add('dragging');
+  try{handle.setPointerCapture(e.pointerId);}catch(err){}
+  document.addEventListener('pointermove',onPhaseDragMove);
+  document.addEventListener('pointerup',endPhaseDrag);
+  document.addEventListener('pointercancel',endPhaseDrag);
+}
+function onPhaseDragMove(e){
+  if(!phaseDrag)return;
+  const {row,startPointerY,startTop}=phaseDrag;
+  const transformY=startTop+(e.clientY-startPointerY)-row.offsetTop;
+  row.style.transform=`translateY(${transformY}px)`;
+  const container=document.getElementById('phase-options');
+  const items=[...container.querySelectorAll('.phase-option')];
+  const rowRect=row.getBoundingClientRect();
+  const rowMid=rowRect.top+rowRect.height/2;
+  const rowIdx=items.indexOf(row);
+  for(const sib of items){
+    if(sib===row)continue;
+    const sibIdx=items.indexOf(sib);
+    const r=sib.getBoundingClientRect();
+    const sibMid=r.top+r.height/2;
+    if(rowIdx<sibIdx&&rowMid>sibMid){
+      container.insertBefore(row,sib.nextElementSibling);
+      break;
+    } else if(rowIdx>sibIdx&&rowMid<sibMid){
+      container.insertBefore(row,sib);
+      break;
+    }
+  }
+}
+function endPhaseDrag(){
+  if(!phaseDrag)return;
+  const row=phaseDrag.row;
+  row.classList.remove('dragging');
+  row.style.transform='';
+  document.removeEventListener('pointermove',onPhaseDragMove);
+  document.removeEventListener('pointerup',endPhaseDrag);
+  document.removeEventListener('pointercancel',endPhaseDrag);
+  phaseDrag=null;
+  const container=document.getElementById('phase-options');
+  const order=[...container.querySelectorAll('.phase-option')].map(el=>el.dataset.key);
+  phasesList.sort((a,b)=>order.indexOf(a.key)-order.indexOf(b.key));
+  saveAll();
 }
 function savePhase(){
   currentPhase=selectedPhase;applyPhaseBudget();saveAll();

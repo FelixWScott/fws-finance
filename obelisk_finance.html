@@ -306,6 +306,7 @@ body{
 .phase-option.dragging{opacity:.85;box-shadow:0 6px 16px rgba(0,0,0,.35);position:relative;z-index:5;cursor:grabbing;}
 .phase-option-label{font-size:.85rem;font-weight:700;margin-bottom:3px;}
 .phase-option-desc{font-size:.72rem;color:var(--muted);}
+.phase-budget-tag{display:inline-block;margin-top:6px;font-family:var(--font-mono);font-size:.62rem;letter-spacing:.04em;color:var(--accent);background:var(--accent-soft);border-radius:20px;padding:3px 9px;}
 .phase-drag-handle{cursor:grab;touch-action:none;color:var(--muted);font-size:1.05rem;line-height:1;padding:4px 8px 4px 0;flex-shrink:0;user-select:none;-webkit-user-select:none;}
 
 /* APP LOCK */
@@ -2720,17 +2721,21 @@ async function renderUnmatchedRecurring(){
 }
 function openPhaseSheet(){
   selectedPhase=currentPhase;
-  document.getElementById('phase-options').innerHTML=phasesList.map(p=>`
+  document.getElementById('phase-options').innerHTML=phasesList.map(p=>{
+    const committed=Object.values(p.budgets||{}).reduce((s,v)=>s+(v||0),0);
+    return `
     <div class="phase-option${p.key===selectedPhase?' selected':''}" data-key="${p.key}" onclick="selectPhase('${p.key}',this)">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
         <div class="phase-drag-handle" onpointerdown="startPhaseDrag(event,this)" onclick="event.stopPropagation();">⠿</div>
         <div style="flex:1;min-width:0;">
           <div class="phase-option-label">${p.label}</div>
           <div class="phase-option-desc">${p.desc}</div>
+          <div class="phase-budget-tag">${fmt(committed)}/mo committed</div>
         </div>
         <button onclick="event.stopPropagation();openEditPhase('${p.key}')" style="background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;padding:2px 4px;flex-shrink:0;">✎</button>
       </div>
-    </div>`).join('') + `<button onclick="openAddPhase()" style="width:100%;background:var(--surface2);border:1px dashed var(--border);border-radius:var(--radius-sm);color:var(--muted);padding:12px;font-size:.78rem;cursor:pointer;font-family:var(--font-mono);letter-spacing:.08em;text-transform:uppercase;margin-top:4px;">+ Add phase</button>`;
+    </div>`;
+  }).join('') + `<button onclick="openAddPhase()" style="width:100%;background:var(--surface2);border:1px dashed var(--border);border-radius:var(--radius-sm);color:var(--muted);padding:12px;font-size:.78rem;cursor:pointer;font-family:var(--font-mono);letter-spacing:.08em;text-transform:uppercase;margin-top:4px;">+ Add phase</button>`;
   openSheet('phase-overlay');
 }
 function selectPhase(key,el){

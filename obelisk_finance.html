@@ -25,12 +25,13 @@
   --nav-h:64px; --safe-bottom:env(safe-area-inset-bottom,0px);
   --font-main:'Rajdhani',sans-serif;
   --font-mono:'Share Tech Mono',monospace;
+  --glow1:rgba(0,255,65,0.04); --glow2:rgba(0,255,65,0.015); --glow3:rgba(0,255,65,0.22);
 }
-body[data-theme="terminal"]{text-shadow:0 0 3px currentColor;}
-body[data-theme="terminal"] .card,body[data-theme="terminal"] .settings-section,body[data-theme="terminal"] .budget-item,
-body[data-theme="terminal"] .sheet-overlay .bottom-sheet{box-shadow:0 0 6px rgba(0,255,65,0.04),inset 0 0 12px rgba(0,255,65,0.015);}
-body[data-theme="terminal"] .toggle-btn.active,body[data-theme="terminal"] .cat-btn.selected,
-body[data-theme="terminal"] .save-btn,body[data-theme="terminal"] .btn-accent{box-shadow:0 0 5px rgba(0,255,65,0.22);}
+body[data-theme^="terminal"]{text-shadow:0 0 3px currentColor;}
+body[data-theme^="terminal"] .card,body[data-theme^="terminal"] .settings-section,body[data-theme^="terminal"] .budget-item,
+body[data-theme^="terminal"] .sheet-overlay .bottom-sheet{box-shadow:0 0 6px var(--glow1),inset 0 0 12px var(--glow2);}
+body[data-theme^="terminal"] .toggle-btn.active,body[data-theme^="terminal"] .cat-btn.selected,
+body[data-theme^="terminal"] .save-btn,body[data-theme^="terminal"] .btn-accent{box-shadow:0 0 5px var(--glow3);}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 body{
   font-family:var(--font-main);
@@ -569,6 +570,14 @@ body{
         <button id="theme-terminal" onclick="setTheme('terminal')"
           style="font-family:var(--font-mono);font-size:.62rem;padding:6px 12px;border-radius:var(--radius);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;border:1px solid var(--border);background:transparent;color:var(--muted);">
           TERMINAL
+        </button>
+        <button id="theme-terminal-cyber" onclick="setTheme('terminal-cyber')"
+          style="font-family:var(--font-mono);font-size:.62rem;padding:6px 12px;border-radius:var(--radius);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;border:1px solid var(--border);background:transparent;color:var(--muted);">
+          CYBER TERM
+        </button>
+        <button id="theme-terminal-noir" onclick="setTheme('terminal-noir')"
+          style="font-family:var(--font-mono);font-size:.62rem;padding:6px 12px;border-radius:var(--radius);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;border:1px solid var(--border);background:transparent;color:var(--muted);">
+          NOIR TERM
         </button>
       </div>
     </div>
@@ -3389,6 +3398,7 @@ const THEMES = {
     '--red':'#e8002a','--red-soft':'#280008',
     '--blue':'#00d4ff','--blue-soft':'#002833',
     '--scanline':'rgba(255,255,255,0.015)',
+    '--font-main':"'Rajdhani',sans-serif",
   },
   noir: {
     '--bg':'#0f1117','--surface':'#1a1d27','--surface2':'#222536','--border':'#2e3148',
@@ -3400,6 +3410,7 @@ const THEMES = {
     '--red':'#f05252','--red-soft':'#3d1212',
     '--blue':'#4a9eff','--blue-soft':'#0d2040',
     '--scanline':'rgba(255,255,255,0.008)',
+    '--font-main':"'Rajdhani',sans-serif",
   },
   terminal: {
     '--bg':'#000400','--surface':'#001a00','--surface2':'#002b00','--border':'#0a4a0a',
@@ -3412,7 +3423,39 @@ const THEMES = {
     '--blue':'#00ff9c','--blue-soft':'#00201a',
     '--scanline':'rgba(0,255,65,0.035)',
     '--font-main':"'Share Tech Mono',monospace",
-  }
+    '--glow1':'rgba(0,255,65,0.04)','--glow2':'rgba(0,255,65,0.015)','--glow3':'rgba(0,255,65,0.22)',
+  },
+  // Terminal look (mono font, scanlines, text glow) in a deep-red palette
+  // with yellow interactive highlights — buttons/selected states pop yellow
+  // against the red "phosphor" text and card glow.
+  'terminal-cyber': {
+    '--bg':'#0d0000','--surface':'#1a0505','--surface2':'#2b0808','--border':'#4a1010',
+    '--text':'#ff4d4d','--muted':'#8a2f2f','--dim':'#4a1414',
+    '--accent':'#ffcc00','--accent-soft':'#2a2000',
+    '--yellow':'#ffe066','--yellow-soft':'#332800',
+    '--green':'#39ff14','--green-soft':'#0a2200',
+    '--amber':'#ffe066','--amber-soft':'#332800',
+    '--red':'#ff1a1a','--red-soft':'#2a0000',
+    '--blue':'#00d4ff','--blue-soft':'#001c26',
+    '--scanline':'rgba(255,60,60,0.035)',
+    '--font-main':"'Share Tech Mono',monospace",
+    '--glow1':'rgba(255,50,50,0.05)','--glow2':'rgba(255,50,50,0.02)','--glow3':'rgba(245,196,0,0.28)',
+  },
+  // Terminal look in midnight blues and dark grays — a moodier, more
+  // subdued monochrome glow than Cyber Terminal, no secondary highlight hue.
+  'terminal-noir': {
+    '--bg':'#05060a','--surface':'#0d0f18','--surface2':'#141826','--border':'#232840',
+    '--text':'#7fa8e0','--muted':'#3a4160','--dim':'#1c2036',
+    '--accent':'#4a9eff','--accent-soft':'#0d2040',
+    '--yellow':'#7a86ac','--yellow-soft':'#1a1e30',
+    '--green':'#22c98a','--green-soft':'#0d3d28',
+    '--amber':'#7a86ac','--amber-soft':'#1a1e30',
+    '--red':'#f05252','--red-soft':'#3d1212',
+    '--blue':'#4a9eff','--blue-soft':'#0d2040',
+    '--scanline':'rgba(120,160,255,0.02)',
+    '--font-main':"'Share Tech Mono',monospace",
+    '--glow1':'rgba(74,158,255,0.05)','--glow2':'rgba(74,158,255,0.02)','--glow3':'rgba(74,158,255,0.25)',
+  },
 };
 
 // ─── ICON THEME (Terminal mode swaps emoji for terminal symbols) ─────
@@ -3429,7 +3472,7 @@ const EMOJI_SYMBOL_MAP = {
 };
 
 function applyIconTheme(){
-  const toSymbol = currentTheme==='terminal';
+  const toSymbol = currentTheme.startsWith('terminal');
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   const nodes = [];
   let n;
@@ -3452,7 +3495,7 @@ let iconObserver = null;
 function setupIconObserver(){
   if (iconObserver) iconObserver.disconnect();
   iconObserver = new MutationObserver(()=>{
-    if (currentTheme==='terminal') applyIconTheme();
+    if (currentTheme.startsWith('terminal')) applyIconTheme();
   });
   iconObserver.observe(document.body, {childList:true, subtree:true, characterData:true});
 }
@@ -3502,7 +3545,7 @@ function applyTheme(name) {
 }
 
 function updateThemeButtons(name) {
-  const ids = {cyber:'theme-cyber', noir:'theme-noir', terminal:'theme-terminal'};
+  const ids = {cyber:'theme-cyber', noir:'theme-noir', terminal:'theme-terminal', 'terminal-cyber':'theme-terminal-cyber', 'terminal-noir':'theme-terminal-noir'};
   Object.entries(ids).forEach(([key, id]) => {
     const btn = document.getElementById(id);
     if (!btn) return;

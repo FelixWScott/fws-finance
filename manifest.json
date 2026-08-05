@@ -4,8 +4,8 @@
   "description": "Personal finance tracker",
   "start_url": "./obelisk_finance.html",
   "display": "standalone",
-  "background_color": "#0d0d0d",
-  "theme_color": "#0d0d0d",
+  "background_color": "#000400",
+  "theme_color": "#000400",
   "orientation": "portrait",
   "icons": [
     {

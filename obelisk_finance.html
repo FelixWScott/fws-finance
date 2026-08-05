@@ -6,24 +6,24 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="FWS Finance">
-<meta name="theme-color" content="#0d0d0d">
+<meta name="theme-color" content="#000400">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.svg">
 <title>FWS Finance</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#0d0d0d; --surface:#141414; --surface2:#1c1c1c; --border:#2a2a2a;
-  --text:#e8e8e8; --muted:#555555; --dim:#333333;
-  --accent:#e8002a; --accent-soft:#280008;
-  --yellow:#f5c400; --yellow-soft:#282000;
-  --green:#39ff14; --green-soft:#0a2200;
-  --amber:#f5c400; --amber-soft:#282000;
-  --red:#e8002a; --red-soft:#280008;
-  --blue:#00d4ff; --blue-soft:#002833;
+  --bg:#000400; --surface:#001a00; --surface2:#002b00; --border:#0a4a0a;
+  --text:#33ff33; --muted:#1f7a1f; --dim:#0d3d0d;
+  --accent:#00ff41; --accent-soft:#001f0a;
+  --yellow:#adff2f; --yellow-soft:#1a2600;
+  --green:#00ff41; --green-soft:#001f0a;
+  --amber:#adff2f; --amber-soft:#1a2600;
+  --red:#ff3131; --red-soft:#2a0000;
+  --blue:#00ff9c; --blue-soft:#00201a;
   --radius:3px; --radius-sm:2px;
   --nav-h:64px; --safe-bottom:env(safe-area-inset-bottom,0px);
-  --font-main:'Rajdhani',sans-serif;
+  --font-main:'Share Tech Mono',monospace;
   --font-mono:'Share Tech Mono',monospace;
   --glow1:rgba(0,255,65,0.04); --glow2:rgba(0,255,65,0.015); --glow3:rgba(0,255,65,0.22);
 }
@@ -40,7 +40,7 @@ body{
   min-height:100vh;
   min-height:-webkit-fill-available;
   overflow-x:hidden;
-  background-image:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.015) 2px,rgba(255,255,255,0.015) 4px);
+  background-image:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,65,0.035) 2px,rgba(0,255,65,0.035) 4px);
 }
 /* Override key typography to monospace where it counts */
 .card-value,.card-label,.card-sub,.income-item-value,.income-item-label,
@@ -560,16 +560,8 @@ body{
         <div><div class="settings-row-label">Theme</div><div class="settings-row-sub">Visual style</div></div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <button id="theme-cyber" onclick="setTheme('cyber')"
-          style="font-family:var(--font-mono);font-size:.62rem;padding:6px 12px;border-radius:var(--radius);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);">
-          CYBER
-        </button>
-        <button id="theme-noir" onclick="setTheme('noir')"
-          style="font-family:var(--font-mono);font-size:.62rem;padding:6px 12px;border-radius:var(--radius);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;border:1px solid var(--border);background:transparent;color:var(--muted);">
-          NOIR
-        </button>
         <button id="theme-terminal" onclick="setTheme('terminal')"
-          style="font-family:var(--font-mono);font-size:.62rem;padding:6px 12px;border-radius:var(--radius);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;border:1px solid var(--border);background:transparent;color:var(--muted);">
+          style="font-family:var(--font-mono);font-size:.62rem;padding:6px 12px;border-radius:var(--radius);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);">
           TERMINAL
         </button>
         <button id="theme-terminal-cyber" onclick="setTheme('terminal-cyber')"
@@ -3416,30 +3408,6 @@ function showToast(msg,type=''){
 // ─── THEME ────────────────────────────────────────────────
 
 const THEMES = {
-  cyber: {
-    '--bg':'#0d0d0d','--surface':'#141414','--surface2':'#1c1c1c','--border':'#2a2a2a',
-    '--text':'#e8e8e8','--muted':'#555555','--dim':'#333333',
-    '--accent':'#e8002a','--accent-soft':'#280008',
-    '--yellow':'#f5c400','--yellow-soft':'#282000',
-    '--green':'#39ff14','--green-soft':'#0a2200',
-    '--amber':'#f5c400','--amber-soft':'#282000',
-    '--red':'#e8002a','--red-soft':'#280008',
-    '--blue':'#00d4ff','--blue-soft':'#002833',
-    '--scanline':'rgba(255,255,255,0.015)',
-    '--font-main':"'Rajdhani',sans-serif",
-  },
-  noir: {
-    '--bg':'#0f1117','--surface':'#1a1d27','--surface2':'#222536','--border':'#2e3148',
-    '--text':'#d0d4e8','--muted':'#5a6080','--dim':'#363a52',
-    '--accent':'#4a9eff','--accent-soft':'#0d2040',
-    '--yellow':'#a0a8c0','--yellow-soft':'#1e2030',
-    '--green':'#22c98a','--green-soft':'#0d3d28',
-    '--amber':'#a0a8c0','--amber-soft':'#1e2030',
-    '--red':'#f05252','--red-soft':'#3d1212',
-    '--blue':'#4a9eff','--blue-soft':'#0d2040',
-    '--scanline':'rgba(255,255,255,0.008)',
-    '--font-main':"'Rajdhani',sans-serif",
-  },
   terminal: {
     '--bg':'#000400','--surface':'#001a00','--surface2':'#002b00','--border':'#0a4a0a',
     '--text':'#33ff33','--muted':'#1f7a1f','--dim':'#0d3d0d',
@@ -3548,7 +3516,7 @@ function setupDaySheetSwipe(){
   },{passive:true});
 }
 
-let currentTheme = 'cyber';
+let currentTheme = 'terminal';
 
 function setTheme(name) {
   currentTheme = name;
@@ -3558,7 +3526,7 @@ function setTheme(name) {
 }
 
 function applyTheme(name) {
-  const vars = THEMES[name] || THEMES.cyber;
+  const vars = THEMES[name] || THEMES.terminal;
   const root = document.documentElement;
   Object.entries(vars).forEach(([k, v]) => {
     if (k === '--scanline') {
@@ -3573,7 +3541,7 @@ function applyTheme(name) {
 }
 
 function updateThemeButtons(name) {
-  const ids = {cyber:'theme-cyber', noir:'theme-noir', terminal:'theme-terminal', 'terminal-cyber':'theme-terminal-cyber', 'terminal-noir':'theme-terminal-noir'};
+  const ids = {terminal:'theme-terminal', 'terminal-cyber':'theme-terminal-cyber', 'terminal-noir':'theme-terminal-noir'};
   Object.entries(ids).forEach(([key, id]) => {
     const btn = document.getElementById(id);
     if (!btn) return;
@@ -3598,8 +3566,11 @@ async function init(){
   loadAll();
   applyPhaseBudget();
   renderCategoryPickers();
-  let savedTheme=localStorage.getItem('fwsTheme')||'cyber';
-  if(savedTheme==='matrix')savedTheme='terminal'; // old name, migrate silently
+  let savedTheme=localStorage.getItem('fwsTheme')||'terminal';
+  // Old theme names, migrated silently to their closest surviving equivalent
+  if(savedTheme==='matrix')savedTheme='terminal';
+  if(savedTheme==='cyber')savedTheme='terminal-cyber';
+  if(savedTheme==='noir')savedTheme='terminal-noir';
   currentTheme=savedTheme;
   applyTheme(savedTheme);
   setupIconObserver();

@@ -331,6 +331,7 @@ body{
 .empty-icon{font-size:2rem;margin-bottom:8px;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;margin-right:8px;vertical-align:middle;}
+#dash-refresh-btn.syncing{animation:spin .8s linear infinite;color:var(--accent);border-color:var(--accent);}
 .toast{position:fixed;bottom:calc(var(--nav-h) + var(--safe-bottom) + 16px);left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 20px;font-size:.82rem;font-weight:600;opacity:0;transition:all .3s;z-index:300;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 .toast.success{border-color:var(--green);color:var(--green);}
@@ -375,7 +376,7 @@ body{
 
 <!-- DASHBOARD -->
 <div class="screen active" id="screen-dashboard">
-  <div class="screen-header" style="display:flex;justify-content:space-between;align-items:flex-start;"><div><div class="fws-tag" style="font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--accent);letter-spacing:.2em;margin-bottom:4px;">// FWS.FINANCE</div><h1>Dashboard</h1><div class="subtitle" id="dash-date"></div></div><div style="display:flex;align-items:center;gap:8px;margin-top:48px;"><div id="sync-badge" onclick="flushPendingWrites()" title="Some changes haven't synced yet — tap to retry" style="display:none;align-items:center;gap:4px;cursor:pointer;background:var(--yellow-soft);border:1px solid var(--yellow);border-radius:var(--radius);height:36px;padding:0 10px;font-family:var(--font-mono);font-size:.68rem;color:var(--yellow);flex-shrink:0;">⏳ <span id="sync-badge-count">0</span></div><button onclick="showScreen('settings')" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);min-width:36px;height:36px;padding:0 6px;color:var(--muted);font-size:1.1rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;white-space:nowrap;">⚙️</button></div></div>
+  <div class="screen-header" style="display:flex;justify-content:space-between;align-items:flex-start;"><div><div class="fws-tag" style="font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--accent);letter-spacing:.2em;margin-bottom:4px;">// FWS.FINANCE</div><h1>Dashboard</h1><div class="subtitle" id="dash-date"></div></div><div style="display:flex;align-items:center;gap:8px;margin-top:48px;"><div id="sync-badge" onclick="flushPendingWrites()" title="Some changes haven't synced yet — tap to retry" style="display:none;align-items:center;gap:4px;cursor:pointer;background:var(--yellow-soft);border:1px solid var(--yellow);border-radius:var(--radius);height:36px;padding:0 10px;font-family:var(--font-mono);font-size:.68rem;color:var(--yellow);flex-shrink:0;">⏳ <span id="sync-badge-count">0</span></div><button id="dash-refresh-btn" onclick="refreshMonzoFromDashboard()" title="Pull latest from Monzo" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);min-width:36px;height:36px;padding:0 6px;color:var(--muted);font-size:1.1rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;white-space:nowrap;">↻</button><button onclick="showScreen('settings')" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);min-width:36px;height:36px;padding:0 6px;color:var(--muted);font-size:1.1rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;white-space:nowrap;">⚙️</button></div></div>
   <!-- Monzo queue banner -->
   <div id="monzo-banner" style="display:none;margin:0 16px 12px;background:var(--yellow-soft);border:1px solid var(--yellow);border-radius:var(--radius);padding:12px 16px;display:none;justify-content:space-between;align-items:center;">
     <div>
@@ -3079,15 +3080,42 @@ async function checkMonzoQueue() {
   } catch(e) { console.error('Queue check error:', e); }
 }
 
-async function syncMonzoNow() {
+// Shared core: kick off the Apps Script Monzo pull, give it a moment to
+// land, then refresh the queue/banner. Callers handle their own screen
+// refresh afterward (queue list vs. dashboard totals).
+let monzoSyncBusy=false;
+async function runMonzoSync(){
+  if(monzoSyncBusy)return false;
+  monzoSyncBusy=true;
   showToast('Syncing Monzo...', '');
   try {
     await scriptWrite({action:'syncMonzo'});
     await new Promise(r => setTimeout(r, 2500));
     await checkMonzoQueue();
-    renderMonzoQueue();
     showToast('Sync complete ✓', 'success');
-  } catch(e) { showToast('Sync error', 'error'); }
+    return true;
+  } catch(e) {
+    showToast('Sync error', 'error');
+    return false;
+  } finally {
+    monzoSyncBusy=false;
+  }
+}
+
+async function syncMonzoNow() {
+  await runMonzoSync();
+  renderMonzoQueue();
+}
+
+// Dashboard header refresh button — pulls Monzo, then re-renders the
+// dashboard so any newly-synced transactions show up immediately.
+async function refreshMonzoFromDashboard(){
+  const btn=document.getElementById('dash-refresh-btn');
+  if(monzoSyncBusy)return;
+  if(btn)btn.classList.add('syncing');
+  await runMonzoSync();
+  if(document.getElementById('screen-dashboard').classList.contains('active'))await renderDashboard();
+  if(btn)btn.classList.remove('syncing');
 }
 
 function openMonzoQueue() {
